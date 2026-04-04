@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEO·PROXY COMBAT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #cc0000;
+            overflow: hidden;
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #camera-feed {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+        
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+        
+        .hud {
+            position: absolute;
+            z-index: 3;
+            pointer-events: none;
+            font-family: 'Courier New', monospace;
+            color: #cc0000;
+            text-shadow: 0 0 10px #cc0000;
+        }
+        
+        .top-bar {
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border: 1px solid #cc0000;
+        }
+        
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3;
+            pointer-events: none;
+        }
+        
+        .bottom-left {
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border: 1px solid #cc0000;
+        }
+        
+        .bottom-right {
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border: 1px solid #cc0000;
+        }
+        
+        .hit-flash {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 4;
+            pointer-events: none;
+            animation: fadeOut 1s forwards;
+        }
+        
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        .reload-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            z-index: 4;
+            pointer-events: none;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <video id="camera-feed" autoplay playsinline></video>
+    <canvas id="game-canvas"></canvas>
+    
+    <div class="hud top-bar">
+        <div>NEO·PROXY COMBAT v0.1</div>
+        <div id="score">SCORE: 0</div>
+    </div>
+    
+    <div class="crosshair">
+        <svg width="50" height="50" viewBox="0 0 50 50">
+            <line x1="25" y1="10" x2="25" y2="40" stroke="#cc0000" stroke-width="2"/>
+            <line x1="10" y1="25" x2="40" y2="25" stroke="#cc0000" stroke-width="2"/>
+            <circle cx="25" cy="25" r="8" fill="none" stroke="#cc0000" stroke-width="1"/>
+        </svg>
+    </div>
+    
+    <div class="hud bottom-left">
+        <div>OPERATOR: DARKPROXY</div>
+    </div>
+    
+    <div class="hud bottom-right">
+        <div id="ammo">AMMO: 12/12</div>
+    </div>
+    
+    <div id="reload-indicator" class="reload-indicator">RELOADING...</div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Game state
+        let scene, camera, renderer, raycaster, enemies = [];
+        let score = 0;
+        let ammo = 12;
+        let maxAmmo = 12;
+        let isReloading = false;
+        let cameraStream = null;
+        
+        // Initialize camera feed
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' },
+                    audio: false
+                });
+                const video = document.getElementById('camera-feed');
+                video.srcObject = stream;
+                cameraStream = stream;
+            } catch (error) {
+                console.log('Camera access denied, using black background');
+            }
+        }
+        
+        // Initialize Three.js
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: document.getElementById('game-canvas'),
+                alpha: true,
+                antialias: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+            
+            raycaster = new THREE.Raycaster();
+            camera.position.z = 5;
+            
+            // Add lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+        }
+        
+        // Create enemy octahedron
+        function createEnemy() {
+            const geometry = new THREE.OctahedronGeometry(0.5);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0xcc0000,
+                emissive: 0x660000,
+                emissiveIntensity: 0.2
+            });
+            const enemy = new THREE.Mesh(geometry, material);
+            
+            // Random position
+            enemy.position.x = (Math.random() - 0.5) * 8;
+            enemy.position.y = (Math.random() - 0.5) * 6;
+            enemy.position.z = (Math.random() - 0.5) * 4;
+            
+            // Random rotation speed
+            enemy.userData.rotationSpeed = {
+                x: Math.random() * 0.02,
+                y: Math.random() * 0.02,
+                z: Math.random() * 0.02
+            };
+            
+            scene.add(enemy);
+            enemies.push(enemy);
+        }
+        
+        // Initialize enemies
+        function initEnemies() {
+            for (let i = 0; i < 5; i++) {
+                createEnemy();
+            }
+        }
+        
+        // Handle shooting
+        function shoot(event) {
+            if (ammo <= 0 || isReloading) return;
+            
+            ammo--;
+            updateAmmo();
+            
+            // Get mouse/touch position
+            const mouse = new THREE.Vector2();
+            if (event.touches) {
+                mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+            } else {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            }
+            
+            // Raycast from center of screen
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(enemies);
+            
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                eliminateEnemy(hit);
+            }
+            
+            if (ammo === 0) {
+                reload();
+            }
+        }
+        
+        // Eliminate enemy
+        function eliminateEnemy(enemy) {
+            // Remove from scene and array
+            scene.remove(enemy);
+            const index = enemies.indexOf(enemy);
+            if (index > -1) {
+                enemies.splice(index, 1);
+            }
+            
+            // Update score
+            score += 100;
+            updateScore();
+            
+            // Show hit flash
+            showHitFlash();
+            
+            // Spawn new enemy
+            setTimeout(() => createEnemy(), 500);
+            
+            // Log to API
+            logKill();
+        }
+        
+        // Show hit flash
+        function showHitFlash() {
+            const flash = document.createElement('div');
+            flash.className = 'hit-flash';
+            flash.textContent = 'TARGET ELIMINATED';
+            document.body.appendChild(flash);
+            
+            setTimeout(() => {
+                document.body.removeChild(flash);
+            }, 1000);
+        }
+        
+        // Reload ammo
+        function reload() {
+            if (isReloading) return;
+            
+            isReloading = true;
+            const reloadIndicator = document.getElementById('reload-indicator');
+            reloadIndicator.style.display = 'block';
+            
+            setTimeout(() => {
+                ammo = maxAmmo;
+                updateAmmo();
+                isReloading = false;
+                reloadIndicator.style.display = 'none';
+            }, 2000);
+        }
+        
+        // Update HUD
+        function updateScore() {
+            document.getElementById('score').textContent = `SCORE: ${score}`;
+        }
+        
+        function updateAmmo() {
+            document.getElementById('ammo').textContent = `AMMO: ${ammo}/${maxAmmo}`;
+        }
+        
+        // Log kill to API
+        async function logKill() {
+            const timestamp = new Date().toISOString();
+            const killData = {
+                score: score,
+                enemiesEliminated: Math.floor(score / 100),
+                timestamp: timestamp
+            };
+            
+            try {
+                await fetch('/api/memory', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: `KILL_${timestamp}`,
+                        content: JSON.stringify(killData)
+                    })
+                });
+            } catch (error) {
+                console.log('Failed to log kill:', error);
+            }
+        }
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Rotate enemies
+            enemies.forEach(enemy => {
+                enemy.rotation.x += enemy.userData.rotationSpeed.x;
+                enemy.rotation.y += enemy.userData.rotationSpeed.y;
+                enemy.rotation.z += enemy.userData.rotationSpeed.z;
+            });
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Handle resize
+        function handleResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Initialize game
+        async function init() {
+            await initCamera();
+            initThreeJS();
+            initEnemies();
+            animate();
+            
+            // Event listeners
+            window.addEventListener('resize', handleResize);
+            document.addEventListener('click', shoot);
+            document.addEventListener('touchstart', shoot);
+            
+            // Keyboard controls
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'r' || event.key === 'R') {
+                    reload();
+                }
+            });
+        }
+        
+        // Start game
+        init();
+    </script>
+</body>
+</html>
