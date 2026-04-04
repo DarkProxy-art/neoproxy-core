@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>NEO-PROXY COMBAT | Phaser Edition v1.0</title>
+    <title>NEO-PROXY VISION v2.0 | AR + AI + SENSORS</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -12,15 +12,25 @@
             font-family: 'Courier New', monospace;
             touch-action: none;
         }
-        #game-container {
-            position: fixed;
-            top: 0;
-            left: 0;
+        #renderCanvas { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 10; 
+            touch-action: none;
+        }
+        #video-feed {
+            position: absolute;
             width: 100%;
             height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            filter: brightness(0.7) contrast(1.3) saturate(0.8) hue-rotate(85deg) sepia(0.3);
         }
-        /* HUD externo para estadísticas */
-        .hud-external {
+        /* Overlay HUD */
+        .hud-overlay {
             position: fixed;
             top: 0;
             left: 0;
@@ -30,10 +40,10 @@
             padding: 15px;
             display: flex;
             justify-content: space-between;
-            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+            background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
         }
         .hud-panel {
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.6);
             border: 1px solid #0f0;
             padding: 8px 15px;
             backdrop-filter: blur(4px);
@@ -41,514 +51,436 @@
         }
         .hud-panel div {
             color: #0f0;
-            font-size: 11px;
+            font-size: 10px;
             letter-spacing: 1px;
         }
         .hud-panel .value {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             text-shadow: 0 0 5px #0f0;
         }
-        .kill-feed {
+        /* Scanlines */
+        .scanlines {
             position: fixed;
-            top: 80px;
-            right: 15px;
-            z-index: 20;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0,255,0,0.05) 0px, rgba(0,255,0,0.05) 2px, transparent 2px, transparent 4px);
             pointer-events: none;
-            text-align: right;
+            z-index: 30;
         }
-        .kill-entry {
+        /* Centro de mira */
+        .crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            z-index: 25;
+            pointer-events: none;
+        }
+        .crosshair::before, .crosshair::after {
+            content: '';
+            position: absolute;
+            background: #0f0;
+            box-shadow: 0 0 5px #0f0;
+        }
+        .crosshair::before {
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            transform: translateY(-50%);
+        }
+        .crosshair::after {
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            transform: translateX(-50%);
+        }
+        /* Mensajes flotantes */
+        .scan-message {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
             background: rgba(0,0,0,0.8);
-            border-left: 3px solid #0f0;
-            padding: 5px 10px;
-            margin-top: 5px;
+            border: 1px solid #0f0;
+            padding: 10px 20px;
             color: #0f0;
-            font-size: 10px;
-            animation: slideIn 0.3s ease-out;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 35;
+            white-space: nowrap;
+            animation: scanPulse 0.5s ease-out;
+            pointer-events: none;
         }
-        @keyframes slideIn {
-            from { transform: translateX(100px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        @keyframes scanPulse {
+            0% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+            100% { opacity: 1; transform: translateX(-50%) scale(1); }
         }
         @media (max-width: 768px) {
             .hud-panel { padding: 5px 10px; }
-            .hud-panel .value { font-size: 16px; }
+            .hud-panel .value { font-size: 14px; }
         }
     </style>
-    <script src="phaser.min.js"></script>
 </head>
 <body>
-    <div id="game-container"></div>
+    <video id="video-feed" autoplay playsinline muted></video>
+    <canvas id="renderCanvas"></canvas>
+    <div class="scanlines"></div>
+    <div class="crosshair"></div>
     
-    <div class="hud-external">
+    <div class="hud-overlay">
         <div class="hud-panel">
-            <div>NEO-PROXY // COMBAT</div>
-            <div>v1.0 | PHASER EDITION</div>
+            <div>NEO-PROXY // VISION OS</div>
+            <div>v2.0 | AR MODE</div>
         </div>
         <div class="hud-panel" style="text-align:right">
-            <div>SCORE</div>
-            <div class="value" id="scoreValue">0</div>
+            <div>STATUS</div>
+            <div class="value" id="statusValue">SCANNING</div>
         </div>
     </div>
     
-    <div class="kill-feed" id="killFeed"></div>
+    <div class="hud-overlay" style="top: auto; bottom: 0; background: linear-gradient(0deg, rgba(0,0,0,0.7) 0%, transparent 100%);">
+        <div class="hud-panel">
+            <div>OBJECTIVES</div>
+            <div id="objectivesList" style="font-size: 8px;">- SCAN ENVIRONMENT</div>
+        </div>
+        <div class="hud-panel" style="text-align:right">
+            <div>DETECTIONS</div>
+            <div class="value" id="detectionCount">0</div>
+        </div>
+    </div>
 
+    <div id="scanMessageContainer"></div>
+
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    
     <script>
-        // Configuración del juego
-        const config = {
-            type: Phaser.AUTO,
-            parent: 'game-container',
-            width: window.innerWidth,
-            height: window.innerHeight,
-            backgroundColor: '#050505',
-            physics: {
-                default: 'arcade',
-                arcade: {
-                    gravity: { y: 0 },
-                    debug: false
-                }
-            },
-            scene: {
-                preload: preload,
-                create: create,
-                update: update
-            },
-            scale: {
-                mode: Phaser.Scale.RESIZE,
-                autoCenter: Phaser.Scale.CENTER_BOTH
-            }
-        };
-
-        const game = new Phaser.Game(config);
+        // ============================================
+        // NEO-PROXY VISION v2.0
+        // Babylon.js + TensorFlow.js + Device Sensors
+        // ============================================
         
-        // Variables globales
-        let player;
-        let enemies;
-        let bullets;
-        let score = 0;
-        let kills = 0;
-        let joystick;
-        let fireButton;
-        let cursors;
-        let lastShot = 0;
-        let shotDelay = 200;
-        let playerHealth = 100;
-        let healthBar;
-        let healthText;
-        let wave = 1;
-        let enemiesThisWave = 0;
-        let waveText;
+        let model;
+        let video;
+        let canvas;
+        let engine;
+        let scene;
+        let camera3D;
+        let scanningObjects = [];
+        let detectionHistory = [];
+        let scanLines = [];
+        let particleSystem;
         
-        // Efectos visuales
-        let damageFlash;
-        let muzzleFlash;
-
-        function preload() {
-            // Plugin de joystick virtual
-            this.load.plugin('rexvirtualjoystickplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexvirtualjoystickplugin.min.js', true);
-            
-            // Crear texturas procedurales
-            createTextures(this);
-        }
+        // UI Elements
+        const statusEl = document.getElementById('statusValue');
+        const detectionCountEl = document.getElementById('detectionCount');
+        const objectivesList = document.getElementById('objectivesList');
+        const scanMessageContainer = document.getElementById('scanMessageContainer');
         
-        function createTextures(scene) {
-            // Textura del jugador (triángulo verde)
-            const playerGraphics = scene.make.graphics({ x: 0, y: 0 });
-            playerGraphics.fillStyle(0x00ff00, 1);
-            playerGraphics.fillTriangle(0, -15, -12, 10, 12, 10);
-            playerGraphics.generateTexture('player', 24, 24);
-            playerGraphics.destroy();
-            
-            // Textura del enemigo (cuadrado rojo con ojos)
-            const enemyGraphics = scene.make.graphics({ x: 0, y: 0 });
-            enemyGraphics.fillStyle(0xff3300, 1);
-            enemyGraphics.fillRect(-15, -15, 30, 30);
-            enemyGraphics.fillStyle(0xffffff, 1);
-            enemyGraphics.fillCircle(-6, -4, 4);
-            enemyGraphics.fillCircle(6, -4, 4);
-            enemyGraphics.fillStyle(0x000000, 1);
-            enemyGraphics.fillCircle(-5, -3, 2);
-            enemyGraphics.fillCircle(7, -3, 2);
-            enemyGraphics.generateTexture('enemy', 30, 30);
-            enemyGraphics.destroy();
-            
-            // Textura de bala
-            const bulletGraphics = scene.make.graphics({ x: 0, y: 0 });
-            bulletGraphics.fillStyle(0xffaa00, 1);
-            bulletGraphics.fillCircle(0, 0, 4);
-            bulletGraphics.generateTexture('bullet', 8, 8);
-            bulletGraphics.destroy();
-            
-            // Partícula de explosión
-            const particleGraphics = scene.make.graphics({ x: 0, y: 0 });
-            particleGraphics.fillStyle(0xff6600, 1);
-            particleGraphics.fillCircle(0, 0, 5);
-            particleGraphics.generateTexture('particle', 10, 10);
-            particleGraphics.destroy();
-        }
-
-        function create() {
-            const self = this;
-            const centerX = this.game.config.width / 2;
-            const centerY = this.game.config.height / 2;
-            
-            // Grid de fondo
-            const graphics = this.add.graphics();
-            graphics.lineStyle(1, 0x00ff00, 0.15);
-            const gridSize = 50;
-            for (let x = -gridSize; x < this.game.config.width + gridSize; x += gridSize) {
-                graphics.moveTo(x, 0);
-                graphics.lineTo(x, this.game.config.height);
-                graphics.strokePath();
-            }
-            for (let y = -gridSize; y < this.game.config.height + gridSize; y += gridSize) {
-                graphics.moveTo(0, y);
-                graphics.lineTo(this.game.config.width, y);
-                graphics.strokePath();
-            }
-            
-            // Partículas de fondo (efecto de "polvo digital")
-            const particles = this.add.particles(0, 0, 'particle', {
-                x: { min: 0, max: this.game.config.width },
-                y: { min: 0, max: this.game.config.height },
-                lifespan: 4000,
-                speedX: { min: -10, max: 10 },
-                speedY: { min: -10, max: 10 },
-                scale: { start: 0.3, end: 0 },
-                alpha: { start: 0.3, end: 0 },
-                frequency: 200
-            });
-            
-            // Jugador
-            player = this.physics.add.sprite(centerX, centerY, 'player');
-            player.setCollideWorldBounds(true);
-            player.setDepth(10);
-            player.body.setSize(20, 20);
-            
-            // Grupos
-            enemies = this.physics.add.group();
-            bullets = this.physics.add.group();
-            
-            // Barra de vida (dentro del juego)
-            healthBar = this.add.graphics();
-            healthText = this.add.text(20, 20, 'INTEGRITY: 100%', {
-                fontSize: '12px',
-                fill: '#0f0',
-                fontFamily: '"Courier New", monospace'
-            }).setScrollFactor(0).setDepth(20);
-            
-            // Texto de wave
-            waveText = this.add.text(centerX, 50, `WAVE ${wave}`, {
-                fontSize: '24px',
-                fill: '#0f0',
-                fontFamily: '"Courier New", monospace',
-                stroke: '#000',
-                strokeThickness: 3
-            }).setOrigin(0.5).setScrollFactor(0).setDepth(20);
-            waveText.setAlpha(0);
-            
-            // Colisiones
-            this.physics.add.collider(player, enemies, (p, e) => takeDamage(self, 10), null, this);
-            this.physics.add.collider(bullets, enemies, (b, e) => hitEnemy(self, b, e), null, this);
-            
-            // Joystick táctil
-            if (this.plugins.get('rexvirtualjoystickplugin')) {
-                joystick = this.plugins.get('rexvirtualjoystickplugin').add(this, {
-                    x: 100,
-                    y: this.game.config.height - 100,
-                    radius: 60,
-                    base: this.add.circle(0, 0, 60, 0x00ff00, 0.2),
-                    thumb: this.add.circle(0, 0, 35, 0x00ff00, 0.4),
-                    dir: '8dir',
-                    forceMin: 10
+        // Configuración
+        const SCAN_DETECTIONS = [];
+        let lastScanTime = 0;
+        let frameCount = 0;
+        
+        // ============================================
+        // 1. INICIALIZAR CÁMARA DEL DISPOSITIVO
+        // ============================================
+        async function initCamera() {
+            video = document.getElementById('video-feed');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: "environment",
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
                 });
+                video.srcObject = stream;
+                await video.play();
+                statusEl.innerHTML = "CAMERA: OK";
+                return true;
+            } catch (err) {
+                console.error("Camera error:", err);
+                statusEl.innerHTML = "CAMERA: FAIL";
+                return false;
             }
-            
-            // Botón de disparo
-            fireButton = this.add.circle(this.game.config.width - 80, this.game.config.height - 80, 50, 0xff0000, 0.3)
-                .setInteractive()
-                .setScrollFactor(0)
-                .setDepth(20);
-            fireButton.on('pointerdown', () => shoot(self));
-            
-            // Texto del botón
-            this.add.text(this.game.config.width - 80, this.game.config.height - 80, 'FIRE', {
-                fontSize: '12px',
-                fill: '#fff',
-                fontFamily: '"Courier New", monospace'
-            }).setOrigin(0.5).setScrollFactor(0).setDepth(21);
-            
-            // Efecto de daño
-            damageFlash = this.add.rectangle(0, 0, this.game.config.width, this.game.config.height, 0xff0000, 0)
-                .setOrigin(0)
-                .setScrollFactor(0)
-                .setDepth(15);
-            
-            // Spawn inicial de enemigos
-            spawnWave(this);
-            
-            // Instrucciones
-            this.time.delayedCall(1000, () => {
-                showMessage(this, "JOYSTICK → MOVER", 0x00ff00);
-                showMessage(this, "BOTÓN ROJO → DISPARAR", 0xff6600);
-            });
         }
         
-        function spawnWave(scene) {
-            const enemyCount = 3 + Math.floor(wave * 0.5);
-            enemiesThisWave = enemyCount;
-            
-            for (let i = 0; i < enemyCount; i++) {
-                const side = Math.floor(Math.random() * 4);
-                let x, y;
-                const margin = 100;
-                if (side === 0) { x = Phaser.Math.Between(-margin, scene.game.config.width + margin); y = -margin; }
-                else if (side === 1) { x = Phaser.Math.Between(-margin, scene.game.config.width + margin); y = scene.game.config.height + margin; }
-                else if (side === 2) { x = -margin; y = Phaser.Math.Between(-margin, scene.game.config.height + margin); }
-                else { x = scene.game.config.width + margin; y = Phaser.Math.Between(-margin, scene.game.config.height + margin); }
-                
-                const enemy = scene.physics.add.sprite(x, y, 'enemy');
-                enemy.setData('health', 40 + wave * 5);
-                enemy.setData('maxHealth', 40 + wave * 5);
-                enemy.setVelocity(Phaser.Math.Between(-50, 50), Phaser.Math.Between(-50, 50));
-                enemies.add(enemy);
-            }
-            
-            // Animación de wave
-            waveText.setText(`WAVE ${wave}`);
-            waveText.setAlpha(1);
-            scene.tweens.add({
-                targets: waveText,
-                alpha: 0,
-                y: waveText.y - 50,
-                duration: 1500,
-                ease: 'Power2'
-            });
-        }
-        
-        function shoot(scene) {
-            const now = Date.now();
-            if (now - lastShot < shotDelay) return;
-            lastShot = now;
-            
-            const bullet = scene.physics.add.sprite(player.x, player.y, 'bullet');
-            bullet.setDepth(5);
-            
-            // Dirección hacia el mouse/enemigo más cercano
-            let angle = player.rotation - Math.PI / 2;
-            
-            // Encontrar enemigo más cercano para apuntar automáticamente
-            let closestEnemy = null;
-            let closestDist = Infinity;
-            enemies.getChildren().forEach(enemy => {
-                const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closestEnemy = enemy;
-                }
-            });
-            
-            if (closestEnemy && closestDist < 400) {
-                angle = Phaser.Math.Angle.Between(player.x, player.y, closestEnemy.x, closestEnemy.y);
-            }
-            
-            const speed = 500;
-            scene.physics.velocityFromRotation(angle, speed, bullet.body.velocity);
-            
-            // Auto-destrucción de bala
-            scene.time.delayedCall(2000, () => bullet.destroy());
-            
-            // Efecto de disparo
-            if (muzzleFlash) muzzleFlash.destroy();
-            muzzleFlash = scene.add.circle(player.x, player.y, 8, 0xffaa00, 0.8);
-            scene.time.delayedCall(50, () => muzzleFlash.destroy());
-        }
-        
-        function hitEnemy(scene, bullet, enemy) {
-            bullet.destroy();
-            
-            const enemyHealth = enemy.getData('health') - 25;
-            enemy.setData('health', enemyHealth);
-            
-            // Mostrar daño
-            const damageText = scene.add.text(enemy.x, enemy.y - 20, '-25', {
-                fontSize: '14px',
-                fill: '#ff6600',
-                fontFamily: '"Courier New", monospace'
-            });
-            scene.tweens.add({
-                targets: damageText,
-                y: damageText.y - 30,
-                alpha: 0,
-                duration: 500,
-                onComplete: () => damageText.destroy()
-            });
-            
-            if (enemyHealth <= 0) {
-                // Efecto de explosión
-                const explosion = scene.add.circle(enemy.x, enemy.y, 5, 0xff6600, 1);
-                scene.tweens.add({
-                    targets: explosion,
-                    scale: 3,
-                    alpha: 0,
-                    duration: 200,
-                    onComplete: () => explosion.destroy()
-                });
-                
-                enemy.destroy();
-                score += 100;
-                kills++;
-                updateScoreUI();
-                
-                // Kill feed
-                addKillFeed();
-                
-                enemiesThisWave--;
-                if (enemiesThisWave <= 0 && enemies.getLength() === 0) {
-                    wave++;
-                    spawnWave(scene);
-                } else {
-                    // Reponer enemigo si hay pocos
-                    if (enemies.getLength() < 2 + Math.floor(wave * 0.3)) {
-                        spawnWave(scene);
+        // ============================================
+        // 2. INICIALIZAR SENSORES (Giroscopio + Acelerómetro)
+        // ============================================
+        function initSensors() {
+            if (window.DeviceOrientationEvent) {
+                window.addEventListener('deviceorientation', (event) => {
+                    if (camera3D) {
+                        // Mapear ángulos del dispositivo a rotación 3D
+                        const gamma = event.gamma || 0;  // -90 a 90 (inclinación lateral)
+                        const beta = event.beta || 0;    // -180 a 180 (inclinación frontal)
+                        
+                        // Rotación suave para la cámara 3D
+                        camera3D.rotation.x = BABYLON.Tools.ToRadians(Math.max(-45, Math.min(45, beta - 90)));
+                        camera3D.rotation.y = BABYLON.Tools.ToRadians(Math.max(-60, Math.min(60, gamma)));
+                        
+                        document.getElementById('sensor-data')?.remove();
                     }
-                }
-            } else {
-                // Flash de daño en enemigo
-                enemy.setTint(0xff8888);
-                scene.time.delayedCall(100, () => enemy.clearTint());
-                
-                // Empujar enemigo
-                const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
-                scene.physics.velocityFromRotation(angle, 150, enemy.body.velocity);
-            }
-        }
-        
-        function takeDamage(scene, amount) {
-            playerHealth = Math.max(0, playerHealth - amount);
-            updateHealthUI(scene);
-            
-            // Efecto de daño
-            damageFlash.setFillStyle(0xff0000, 0.4);
-            scene.time.delayedCall(100, () => damageFlash.setFillStyle(0xff0000, 0));
-            
-            // Empujar al jugador
-            if (player.body) {
-                const angle = Math.random() * Math.PI * 2;
-                scene.physics.velocityFromRotation(angle, 200, player.body.velocity);
-            }
-            
-            if (playerHealth <= 0) {
-                gameOver(scene);
-            }
-        }
-        
-        function updateHealthUI(scene) {
-            const percent = playerHealth;
-            healthText.setText(`INTEGRITY: ${Math.floor(percent)}%`);
-            healthBar.clear();
-            healthBar.fillStyle(0x00ff00, 1);
-            healthBar.fillRect(20, 35, (percent / 100) * 150, 6);
-            healthBar.fillStyle(0x330000, 1);
-            healthBar.fillRect(20 + (percent / 100) * 150, 35, 150 - (percent / 100) * 150, 6);
-            
-            if (percent < 30) {
-                healthText.setColor('#ff0000');
-                // Efecto de latido
-                scene.tweens.add({
-                    targets: healthText,
-                    scaleX: 1.1,
-                    scaleY: 1.1,
-                    duration: 100,
-                    yoyo: true
                 });
+                statusEl.innerHTML = "SENSORS: ACTIVE";
             } else {
-                healthText.setColor('#0f0');
+                console.log("Device orientation not supported");
             }
         }
         
-        function updateScoreUI() {
-            document.getElementById('scoreValue').innerHTML = score;
+        // ============================================
+        // 3. INICIALIZAR TENSORFLOW.JS (COCO-SSD)
+        // ============================================
+        async function initAI() {
+            statusEl.innerHTML = "AI: LOADING MODEL...";
+            try {
+                model = await cocoSsd.load();
+                statusEl.innerHTML = "AI: ACTIVE [COCO-SSD]";
+                startDetection();
+            } catch (err) {
+                console.error("AI Error:", err);
+                statusEl.innerHTML = "AI: ERROR";
+            }
         }
         
-        function addKillFeed() {
-            const feed = document.getElementById('killFeed');
-            const entry = document.createElement('div');
-            entry.className = 'kill-entry';
-            entry.innerHTML = `+100 // ENEMY ELIMINATED`;
-            feed.appendChild(entry);
-            setTimeout(() => entry.remove(), 3000);
+        function showScanMessage(message, type = 'info') {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'scan-message';
+            msgDiv.innerHTML = `🔍 ${message}`;
+            msgDiv.style.borderColor = type === 'enemy' ? '#ff0000' : '#0f0';
+            msgDiv.style.color = type === 'enemy' ? '#ff4444' : '#0f0';
+            scanMessageContainer.appendChild(msgDiv);
+            setTimeout(() => msgDiv.remove(), 3000);
         }
         
-        function showMessage(scene, text, color) {
-            const msg = scene.add.text(scene.game.config.width / 2, scene.game.config.height / 2, text, {
-                fontSize: '18px',
-                fill: '#' + color.toString(16),
-                fontFamily: '"Courier New", monospace',
-                stroke: '#000',
-                strokeThickness: 2
-            }).setOrigin(0.5).setScrollFactor(0);
-            scene.tweens.add({
-                targets: msg,
-                y: msg.y - 80,
-                alpha: 0,
-                duration: 1500,
-                onComplete: () => msg.destroy()
-            });
-        }
-        
-        function gameOver(scene) {
-            showMessage(scene, "GAME OVER", 0xff0000);
-            player.destroy();
-            enemies.clear(true, true);
-            scene.time.delayedCall(2000, () => {
-                playerHealth = 100;
-                score = 0;
-                kills = 0;
-                wave = 1;
-                updateScoreUI();
-                const centerX = scene.game.config.width / 2;
-                const centerY = scene.game.config.height / 2;
-                player = scene.physics.add.sprite(centerX, centerY, 'player');
-                player.setCollideWorldBounds(true);
-                player.body.setSize(20, 20);
-                scene.physics.add.collider(player, enemies, (p, e) => takeDamage(scene, 10), null, scene);
-                spawnWave(scene);
-                updateHealthUI(scene);
-            });
-        }
-        
-        function update(time, delta) {
-            if (!player || !player.body) return;
-            
-            // Movimiento con joystick
-            if (joystick && joystick.enable) {
-                const speed = 250;
-                const forceX = joystick.forceX || 0;
-                const forceY = joystick.forceY || 0;
-                player.body.setVelocity(forceX * speed, forceY * speed);
-                
-                // Rotación hacia el movimiento
-                if (Math.abs(forceX) > 0.1 || Math.abs(forceY) > 0.1) {
-                    player.setRotation(Math.atan2(forceY, forceX) + Math.PI / 2);
+        async function startDetection() {
+            async function detect() {
+                if (!model || !video || video.readyState !== 4) {
+                    requestAnimationFrame(detect);
+                    return;
                 }
+                
+                try {
+                    const predictions = await model.detect(video);
+                    frameCount++;
+                    
+                    if (predictions.length > 0) {
+                        detectionCountEl.innerHTML = predictions.length;
+                        statusEl.innerHTML = "SCANNING: ACTIVE";
+                        
+                        // Actualizar objetivos detectados
+                        let objectivesHtml = '';
+                        predictions.slice(0, 3).forEach(pred => {
+                            const confidence = (pred.score * 100).toFixed(0);
+                            objectivesHtml += `<div style="color: #0f0;">- ${pred.class.toUpperCase()} [${confidence}%]</div>`;
+                            
+                            // Notificar nuevos objetos interesantes
+                            const now = Date.now();
+                            if (!detectionHistory[pred.class] || now - detectionHistory[pred.class] > 5000) {
+                                detectionHistory[pred.class] = now;
+                                if (['person', 'cell phone', 'laptop', 'book'].includes(pred.class)) {
+                                    showScanMessage(`${pred.class.toUpperCase()} DETECTED - CYBERNETIC ARTIFACT`, 'info');
+                                    add3DMarker(pred);
+                                }
+                            }
+                        });
+                        objectivesList.innerHTML = objectivesHtml || '<div>- NO TARGETS</div>';
+                        
+                        // Efecto de pulso en el HUD
+                        if (predictions.length > 0 && frameCount % 30 === 0) {
+                            statusEl.style.textShadow = '0 0 10px #0f0';
+                            setTimeout(() => statusEl.style.textShadow = 'none', 200);
+                        }
+                    } else {
+                        detectionCountEl.innerHTML = '0';
+                        objectivesList.innerHTML = '<div>- SCANNING VOID</div>';
+                    }
+                    
+                } catch (err) {
+                    console.error("Detection error:", err);
+                }
+                
+                requestAnimationFrame(detect);
             }
             
-            // IA de enemigos: perseguir al jugador
-            enemies.getChildren().forEach(enemy => {
-                const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
-                const speed = 80 + wave * 5;
-                this.physics.velocityFromRotation(angle, speed, enemy.body.velocity);
+            detect();
+        }
+        
+        // ============================================
+        // 4. CREAR MARCADORES 3D CON BABYLON.JS
+        // ============================================
+        function add3DMarker(detection) {
+            if (!scene) return;
+            
+            // Crear un cubo flotante que representa el objeto detectado
+            const box = BABYLON.MeshBuilder.CreateBox(`marker_${Date.now()}`, { size: 0.3 }, scene);
+            const mat = new BABYLON.StandardMaterial(`markerMat_${Date.now()}`, scene);
+            mat.emissiveColor = new BABYLON.Color3(0, 1, 0);
+            mat.alpha = 0.7;
+            box.material = mat;
+            
+            // Posición aleatoria en el campo de visión
+            const angleX = (Math.random() - 0.5) * Math.PI / 2;
+            const angleY = (Math.random() - 0.5) * Math.PI / 2;
+            box.position = new BABYLON.Vector3(
+                Math.sin(angleX) * 2,
+                Math.cos(angleY) * 1.5 - 0.5,
+                2 + Math.random() * 1
+            );
+            
+            // Animación de flotación
+            let time = 0;
+            const animate = () => {
+                if (box.isDisposed()) return;
+                time += 0.05;
+                box.position.y += Math.sin(time) * 0.005;
+                box.scaling = new BABYLON.Vector3(1 + Math.sin(time * 3) * 0.1, 1 + Math.sin(time * 3) * 0.1, 1);
+                requestAnimationFrame(animate);
+            };
+            animate();
+            
+            // Auto-destrucción después de 5 segundos
+            setTimeout(() => {
+                if (box && !box.isDisposed()) box.dispose();
+            }, 5000);
+        }
+        
+        // ============================================
+        // 5. CREAR ESCENA 3D DE BABYLON.JS
+        // ============================================
+        function create3DScene() {
+            canvas = document.getElementById('renderCanvas');
+            engine = new BABYLON.Engine(canvas, true);
+            scene = new BABYLON.Scene(engine);
+            scene.autoClear = false; // Para ver el video detrás
+            
+            // Cámara que responde a los sensores
+            camera3D = new BABYLON.FreeCamera("arCamera", new BABYLON.Vector3(0, 0, -3), scene);
+            camera3D.setTarget(BABYLON.Vector3.Zero());
+            camera3D.fov = 0.8;
+            
+            // Iluminación cyberpunk
+            const ambientLight = new BABYLON.HemisphericLight("ambient", new BABYLON.Vector3(0, 1, 0), scene);
+            ambientLight.diffuse = new BABYLON.Color3(0.2, 0.8, 0.2);
+            ambientLight.specular = new BABYLON.Color3(0, 0.5, 0);
+            
+            const pointLight = new BABYLON.PointLight("pointLight", new BABYLON.Vector3(0, 2, 2), scene);
+            pointLight.intensity = 0.8;
+            pointLight.diffuse = new BABYLON.Color3(0, 1, 0);
+            
+            // Partículas de escaneo (líneas láser)
+            const particleSystem = new BABYLON.ParticleSystem("scanParticles", 500, scene);
+            particleSystem.particleTexture = new BABYLON.Texture("https://assets.babylonjs.com/textures/flare.png", scene);
+            particleSystem.emitter = new BABYLON.Vector3(0, 0, 2);
+            particleSystem.minEmitBox = new BABYLON.Vector3(-1, -0.5, 0);
+            particleSystem.maxEmitBox = new BABYLON.Vector3(1, 0.5, 0);
+            particleSystem.color1 = new BABYLON.Color4(0, 1, 0, 1);
+            particleSystem.color2 = new BABYLON.Color4(0, 0.5, 0, 1);
+            particleSystem.minSize = 0.02;
+            particleSystem.maxSize = 0.08;
+            particleSystem.minLifeTime = 0.5;
+            particleSystem.maxLifeTime = 1.5;
+            particleSystem.emitRate = 100;
+            particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
+            particleSystem.start();
+            
+            // Crear un panel HUD flotante
+            const hudPlane = BABYLON.MeshBuilder.CreatePlane("hudPanel", { width: 1.5, height: 0.8 }, scene);
+            hudPlane.position = new BABYLON.Vector3(1.2, -0.8, 2);
+            hudPlane.parent = camera3D;
+            
+            const hudMaterial = new BABYLON.StandardMaterial("hudMat", scene);
+            hudMaterial.emissiveColor = new BABYLON.Color3(0, 1, 0);
+            hudMaterial.alpha = 0.3;
+            hudPlane.material = hudMaterial;
+            
+            // Texto en el panel HUD
+            const dynamicTexture = new BABYLON.DynamicTexture("hudTexture", { width: 512, height: 256 }, scene);
+            const ctx = dynamicTexture.getContext();
+            ctx.fillStyle = '#0f0';
+            ctx.font = 'bold 20px "Courier New"';
+            ctx.fillText('NEO-PROXY', 20, 40);
+            ctx.font = '12px monospace';
+            ctx.fillText('AR MODE ACTIVE', 20, 70);
+            ctx.fillText('AI SCANNING...', 20, 100);
+            dynamicTexture.update();
+            hudMaterial.diffuseTexture = dynamicTexture;
+            
+            // Animar textura del HUD
+            setInterval(() => {
+                if (dynamicTexture && !dynamicTexture.isDisposed) {
+                    const ctx2 = dynamicTexture.getContext();
+                    ctx2.fillStyle = '#0f0';
+                    ctx2.fillRect(0, 0, 512, 256);
+                    ctx2.fillStyle = '#0f0';
+                    ctx2.font = 'bold 20px "Courier New"';
+                    ctx2.fillText('NEO-PROXY', 20, 40);
+                    ctx2.font = '12px monospace';
+                    ctx2.fillText(`TARGETS: ${detectionCountEl.innerText}`, 20, 70);
+                    ctx2.fillText(`STATUS: ${statusEl.innerText}`, 20, 100);
+                    ctx2.fillText(new Date().toLocaleTimeString(), 20, 130);
+                    dynamicTexture.update();
+                }
+            }, 500);
+            
+            return scene;
+        }
+        
+        // ============================================
+        // 6. INICIALIZAR TODO
+        // ============================================
+        async function init() {
+            // Iniciar cámara
+            const cameraReady = await initCamera();
+            if (!cameraReady) {
+                statusEl.innerHTML = "CAMERA: REQUIRED";
+                return;
+            }
+            
+            // Iniciar motor 3D
+            const bjsScene = create3DScene();
+            initSensors();
+            await initAI();
+            
+            // Loop de renderizado
+            engine.runRenderLoop(() => {
+                if (bjsScene) bjsScene.render();
             });
             
-            // Actualizar barra de vida UI
-            updateHealthUI(this);
+            window.addEventListener('resize', () => {
+                engine.resize();
+            });
+            
+            // Mensaje de bienvenida
+            setTimeout(() => {
+                showScanMessage("SYSTEM READY - SCANNING ENVIRONMENT", "info");
+                showScanMessage("AI MODEL COCO-SSD ACTIVE", "info");
+                statusEl.style.animation = 'pulse 1s infinite';
+            }, 2000);
         }
-
-        // Redimensionamiento
-        window.addEventListener('resize', () => {
-            game.scale.resize(window.innerWidth, window.innerHeight);
-        });
+        
+        // Iniciar todo
+        init();
+        
+        // Estilo de pulso
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0%, 100% { text-shadow: 0 0 5px #0f0; }
+                50% { text-shadow: 0 0 15px #0f0; }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
