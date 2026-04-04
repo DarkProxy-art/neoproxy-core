@@ -1,165 +1,440 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-body {
-  margin: 0;
-  background: black;
-  overflow: hidden;
-  font-family: monospace;
-  color: #ff3c00;
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEO-PROXY HUD v0.2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-/* VIDEO */
-video {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+        body {
+            background: radial-gradient(circle at center, #0a0f0a 0%, #050805 100%);
+            font-family: 'Courier New', 'Fira Code', monospace;
+            color: #0f0;
+            text-shadow: 0 0 5px #0f0;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
 
-/* HUD BASE */
-.hud {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
+        /* Efecto CRT */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0,255,0,0.03) 0px, rgba(0,255,0,0.03) 2px, transparent 2px, transparent 4px);
+            pointer-events: none;
+            z-index: 999;
+        }
 
-/* TOP BAR */
-.topbar {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 1px solid #ff3c00;
-  padding: 5px 20px;
-  background: rgba(0,0,0,0.6);
-}
+        /* Scanline */
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(0deg, transparent 50%, rgba(0,255,0,0.02) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            animation: scan 8s linear infinite;
+            z-index: 999;
+        }
 
-/* LEFT PANEL */
-.panel-left {
-  position: absolute;
-  top: 60px;
-  left: 10px;
-  width: 200px;
-  border: 1px solid #ff3c00;
-  padding: 10px;
-  background: rgba(0,0,0,0.6);
-  font-size: 12px;
-}
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100%); }
+        }
 
-/* TARGET */
-.target {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 120px;
-  height: 120px;
-  transform: translate(-50%, -50%);
-}
+        /* Blink animation */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
 
-.target::before,
-.target::after {
-  content: "";
-  position: absolute;
-  border: 2px solid #ff3c00;
-}
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; text-shadow: 0 0 10px #0f0; }
+        }
 
-.target::before {
-  width: 100%;
-  height: 100%;
-}
+        /* Header */
+        .hud-header {
+            border-bottom: 2px solid #0f0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
 
-.target::after {
-  width: 40px;
-  height: 40px;
-  top: 40px;
-  left: 40px;
-}
+        .title {
+            font-size: 1.5rem;
+            letter-spacing: 3px;
+        }
 
-/* WEAPON */
-.weapon {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 250px;
-  height: 180px;
-  background: linear-gradient(45deg, #111, #222);
-  border-left: 2px solid #ff3c00;
-  border-top: 2px solid #ff3c00;
-}
+        .version {
+            color: #8f8;
+            font-size: 0.8rem;
+        }
 
-/* AMMO */
-.ammo {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  border: 1px solid #ff3c00;
-  padding: 5px;
-  background: rgba(0,0,0,0.6);
-}
+        .status-badge {
+            display: inline-block;
+            background: #0f0;
+            color: #000;
+            padding: 2px 8px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
 
-/* MEMORY */
-.memory {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-}
-</style>
+        /* Grid layout */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Cards */
+        .card {
+            border: 1px solid #0f0;
+            background: rgba(0, 15, 0, 0.7);
+            backdrop-filter: blur(3px);
+            padding: 15px;
+        }
+
+        .card-header {
+            border-bottom: 1px solid #0f0;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        /* Stats */
+        .stat-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 0.9rem;
+        }
+
+        .stat-label {
+            color: #8f8;
+        }
+
+        .stat-value {
+            font-weight: bold;
+        }
+
+        /* Progress bars */
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #0a1a0a;
+            border: 1px solid #0f0;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #0f0;
+            width: 0%;
+            transition: width 0.5s;
+        }
+
+        /* Memory nodes */
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin: 10px 0;
+        }
+
+        .memory-node {
+            background: #0a1a0a;
+            border: 1px solid #0f0;
+            text-align: center;
+            padding: 5px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+
+        .memory-node.active {
+            background: #0f0;
+            color: #000;
+            animation: pulse 1s infinite;
+        }
+
+        /* Terminal */
+        .terminal {
+            border: 1px solid #0f0;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            font-family: monospace;
+            margin-top: 20px;
+        }
+
+        .terminal-line {
+            margin: 5px 0;
+            white-space: pre-wrap;
+        }
+
+        .prompt {
+            color: #0f0;
+            font-weight: bold;
+        }
+
+        .cursor {
+            animation: blink 1s infinite;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 20px;
+            border-top: 1px solid #0f0;
+            padding-top: 10px;
+            font-size: 0.7rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .title { font-size: 1rem; }
+            .dashboard { grid-template-columns: 1fr; }
+        }
+
+        .glitch {
+            animation: glitch 0.3s infinite;
+        }
+
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            33% { transform: translate(-2px, 1px); }
+            66% { transform: translate(2px, -1px); }
+        }
+    </style>
 </head>
-
 <body>
+    <div class="hud-header">
+        <div>
+            <div class="title">NEO-PROXY <span style="color:#8f8">HUD</span> <span class="version">v0.2</span></div>
+            <div style="font-size:0.7rem; margin-top:5px;">UN:PP DARKPROXY</div>
+        </div>
+        <div>
+            <span class="status-badge" id="statusBadge">STABLE</span>
+            <div style="font-size:0.7rem; margin-top:5px;">BUILD: asdneb</div>
+        </div>
+    </div>
 
-<video id="cam" autoplay playsinline></video>
+    <div class="dashboard">
+        <!-- Boot Sequence -->
+        <div class="card">
+            <div class="card-header">> BOOT SEQUENCE</div>
+            <div class="terminal-line" id="bootLine1">18:23 - BOOT SEQUENCE INIT</div>
+            <div class="terminal-line" id="bootLine2">18:25 - 411 MEMORY NODES</div>
+            <div class="terminal-line" id="bootLine3">18:27 - NP-ART-0042 ACQUIRED</div>
+            <div class="terminal-line" id="bootLine4">15 CTARE: <span id="ctareValue">--</span></div>
+        </div>
 
-<div class="hud">
+        <!-- System Stats -->
+        <div class="card">
+            <div class="card-header">> SYSTEM STATS</div>
+            <div class="stat-line">
+                <span class="stat-label">STAGE:</span>
+                <span class="stat-value" id="stageValue">GUE 0.9</span>
+            </div>
+            <div class="stat-line">
+                <span class="stat-label">BESTRATIO:</span>
+                <span class="stat-value" id="bestratioValue">0.9 38.237</span>
+            </div>
+            <div class="stat-line">
+                <span class="stat-label">18:35 - TT MEMORY NODES:</span>
+                <span class="stat-value" id="ttMemoryValue">0.5 36.09</span>
+            </div>
+            <div class="stat-line">
+                <span class="stat-label">AARABELE CONNORIT:</span>
+                <span class="stat-value" id="connoritValue">0.5 38.237</span>
+            </div>
+        </div>
 
-  <div class="topbar">
-    NEO-PROXY v0.2
-  </div>
+        <!-- Memory -->
+        <div class="card">
+            <div class="card-header">> MEMORY NODES</div>
+            <div class="memory-grid" id="memoryGrid"></div>
+            <div class="stat-line">
+                <span class="stat-label">MEMORY USAGE:</span>
+                <span class="stat-value" id="memoryPercent">11%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="memoryFill" style="width: 11%;"></div>
+            </div>
+            <div class="stat-line">
+                <span class="stat-label">AMPL:</span>
+                <span class="stat-value" id="amplValue">24</span>
+                <span class="stat-label">0%</span>
+            </div>
+        </div>
 
-  <div class="panel-left">
-    OPERATOR: DARKPROXY<br>
-    STATUS: STABLE<br><br>
-    BOOT SEQUENCE...<br>
-    MEMORY NODES: 11
-  </div>
+        <!-- Fabrication -->
+        <div class="card">
+            <div class="card-header">> FABRICATION</div>
+            <div class="terminal-line" id="fabLine1">/ ISRMERATION: <span id="isrmeration">[MEMORY]</span></div>
+            <div class="terminal-line" id="fabLine2">/ FABRICATION...: <span id="fabrication">[MEMORY]</span></div>
+            <div class="terminal-line" id="fabLine3">/ IREMORY: <span id="iremory">--</span></div>
+            <div class="terminal-line" id="fabLine4">/ IDOMMUATION: <span id="idommuation">--</span></div>
+            <div class="terminal-line" id="fabLine5">/ SYSTEM: <span id="system1">N-SYSTEM NODE</span></div>
+            <div class="terminal-line" id="fabLine6">/ SYSTEMI: <span id="system2">--</span></div>
+            <div class="stat-line" style="margin-top:10px;">
+                <span class="stat-label">ROTOM™:</span>
+                <span class="stat-value" id="rotom">ACTIVE</span>
+            </div>
+        </div>
+    </div>
 
-  <div class="target"></div>
+    <!-- Terminal interactivo -->
+    <div class="terminal">
+        <div class="terminal-line"><span class="prompt">> NP-SHELL v2.4</span> <span class="cursor">_</span></div>
+        <div class="terminal-line" id="terminalOutput">> SYSTEM READY. Type 'help' for commands.</div>
+        <div class="terminal-line" style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <span class="prompt">$</span>
+            <input type="text" id="commandInput" style="background: transparent; border: none; color: #0f0; font-family: monospace; flex: 1; outline: none;" placeholder="type command...">
+        </div>
+    </div>
 
-  <div class="weapon"></div>
+    <div class="footer">
+        <div>NEO-PROXY v0.2 | NP-HUD</div>
+        <div id="archived">ARCHIVED: NP-HANDGUN001 | IE EDENDO1</div>
+        <div id="timestamp"></div>
+    </div>
 
-  <div class="ammo">
-    AMMO: 24
-  </div>
+    <script>
+        // Simulación de datos
+        let memoryNodes = 11;
+        let memoryTotal = 64;
+        let bootComplete = false;
+        let commands = {
+            help: "Comandos: status, memory, nodes, clear, hack, info, scan",
+            status: "STATUS: STABLE | UPTIME: " + Math.floor(Math.random() * 24) + "h " + Math.floor(Math.random() * 60) + "m",
+            memory: "MEMORY: " + memoryNodes + "/" + memoryTotal + " nodes active (" + Math.floor((memoryNodes/memoryTotal)*100) + "%)",
+            nodes: "ACTIVE NODES: 0x4F, 0x2A, 0x11, 0x87, 0x3C, 0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE",
+            clear: "clear",
+            hack: "> HACKING... ACCESS GRANTED. NP-ART-0042 ACQUIRED.",
+            info: "NEO-PROXY v0.2 | UN:PP DARKPROXY | BUILD: asdneb",
+            scan: "SCANNING... [MEMORY NODES: " + memoryNodes + "] [THREAT LEVEL: 0]"
+        };
 
-  <div class="memory">
-    MEMORY: 11
-  </div>
+        // Generar grid de memoria
+        function generateMemoryGrid() {
+            const grid = document.getElementById('memoryGrid');
+            grid.innerHTML = '';
+            for (let i = 0; i < 16; i++) {
+                const node = document.createElement('div');
+                node.className = 'memory-node';
+                if (i < memoryNodes) node.classList.add('active');
+                node.textContent = '0x' + (i+1).toString(16).toUpperCase();
+                node.onclick = () => node.clicked ? null : (node.style.background = '#0f0', node.style.color = '#000');
+                grid.appendChild(node);
+            }
+        }
 
-</div>
+        // Actualizar stats
+        function updateStats() {
+            document.getElementById('memoryPercent').textContent = memoryNodes + '%';
+            document.getElementById('memoryFill').style.width = memoryNodes + '%';
+            document.getElementById('amplValue').textContent = Math.floor(Math.random() * 30) + 20;
+            
+            // Simular cambios aleatorios
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    memoryNodes = Math.min(memoryTotal, Math.max(4, memoryNodes + (Math.random() > 0.5 ? 1 : -1)));
+                    document.getElementById('memoryPercent').textContent = memoryNodes + '%';
+                    document.getElementById('memoryFill').style.width = memoryNodes + '%';
+                    generateMemoryGrid();
+                    document.getElementById('ttMemoryValue').textContent = '0.5 ' + (30 + Math.random() * 15).toFixed(2);
+                }
+                document.getElementById('ctareValue').textContent = Math.floor(Math.random() * 100);
+                document.getElementById('isrmeration').textContent = '[MEMORY:' + memoryNodes + ']';
+                document.getElementById('fabrication').textContent = '[MEMORY:' + memoryNodes + ']';
+            }, 3000);
+        }
 
-<script>
-const video = document.getElementById("cam");
+        // Boot animation
+        async function bootSequence() {
+            const lines = [
+                { id: 'bootLine1', text: '18:23 - BOOT SEQUENCE INIT', delay: 500 },
+                { id: 'bootLine2', text: '18:25 - 411 MEMORY NODES', delay: 1500 },
+                { id: 'bootLine3', text: '18:27 - NP-ART-0042 ACQUIRED', delay: 2500 },
+                { id: 'bootLine4', text: '15 CTARE: 42', delay: 3500 }
+            ];
+            
+            for (const line of lines) {
+                await new Promise(r => setTimeout(r, line.delay));
+                const element = document.getElementById(line.id);
+                if (element) element.innerHTML = line.text;
+            }
+            
+            setTimeout(() => {
+                document.getElementById('terminalOutput').innerHTML = '> BOOT COMPLETE. SYSTEM ONLINE.';
+            }, 4000);
+        }
 
-navigator.mediaDevices.getUserMedia({ video: true })
-.then(stream => {
-  video.srcObject = stream;
-})
-.catch(err => {
-  alert("Camera error: " + err);
-});
+        // Terminal command handler
+        const input = document.getElementById('commandInput');
+        const output = document.getElementById('terminalOutput');
+        
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const cmd = this.value.toLowerCase();
+                const oldOutput = output.innerHTML;
+                
+                if (commands[cmd]) {
+                    if (cmd === 'clear') {
+                        output.innerHTML = '> TERMINAL CLEARED.<br>> Type \'help\' for commands.';
+                    } else {
+                        output.innerHTML = oldOutput + '<br>> ' + commands[cmd];
+                    }
+                } else if (cmd) {
+                    output.innerHTML = oldOutput + '<br>> ERROR: Unknown command. Type \'help\'';
+                }
+                
+                this.value = '';
+                output.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        });
 
-/* SHOOT EFFECT */
-document.addEventListener("click", () => {
-  const target = document.querySelector(".target");
-  target.style.borderColor = "white";
-  setTimeout(() => {
-    target.style.borderColor = "#ff3c00";
-  }, 100);
-});
-</script>
-
+        // Timestamp
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('timestamp').textContent = now.toLocaleTimeString();
+        }
+        
+        // Inicializar
+        generateMemoryGrid();
+        updateStats();
+        bootSequence();
+        updateTimestamp();
+        setInterval(updateTimestamp, 1000);
+        
+        // Efecto glitch aleatorio
+        setInterval(() => {
+            if (Math.random() > 0.95) {
+                document.body.classList.add('glitch');
+                setTimeout(() => document.body.classList.remove('glitch'), 200);
+            }
+        }, 5000);
+    </script>
 </body>
 </html>
