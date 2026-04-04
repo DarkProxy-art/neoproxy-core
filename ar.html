@@ -3,453 +3,552 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>NEO-PROXY COMBAT v0.1</title>
+    <title>NEO-PROXY COMBAT | Phaser Edition v1.0</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: #000; font-family: 'Courier New', monospace; overflow: hidden; height: 100vh; position: fixed; width: 100%; }
-        #gameCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 1; }
-        
-        /* HUD */
-        .hud { position: fixed; top: 0; left: 0; right: 0; z-index: 10; padding: 15px; display: flex; justify-content: space-between; pointer-events: none; }
-        .hud-panel { background: rgba(0,0,0,0.8); border: 1px solid #0f0; padding: 8px 15px; backdrop-filter: blur(4px); }
-        .hud-panel div { color: #0f0; font-size: 12px; letter-spacing: 1px; }
-        .score { font-size: 24px; font-weight: bold; }
-        
-        /* Health Bar */
-        .health-container { position: fixed; bottom: 80px; left: 20px; right: 20px; z-index: 10; pointer-events: none; }
-        .health-bg { background: #1a0000; height: 12px; border: 1px solid #0f0; border-radius: 2px; overflow: hidden; }
-        .health-fill { width: 100%; height: 100%; background: #0f0; transition: width 0.2s; box-shadow: 0 0 5px #0f0; }
-        .health-text { color: #0f0; font-size: 10px; margin-top: 4px; text-align: center; }
-        
-        /* Crosshair */
-        .crosshair { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30px; height: 30px; z-index: 15; pointer-events: none; }
-        .crosshair::before, .crosshair::after { content: ''; position: absolute; background: #0f0; box-shadow: 0 0 4px #0f0; }
-        .crosshair::before { top: 50%; left: 0; right: 0; height: 2px; transform: translateY(-50%); }
-        .crosshair::after { left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%); }
-        
-        /* Botón de disparo (táctil) */
-        .fire-btn { position: fixed; bottom: 20px; right: 20px; width: 80px; height: 80px; border-radius: 50%; background: rgba(0,255,0,0.2); border: 3px solid #0f0; z-index: 20; pointer-events: auto; cursor: pointer; box-shadow: 0 0 15px rgba(0,255,0,0.3); }
-        .fire-btn:active { background: rgba(0,255,0,0.5); transform: scale(0.95); }
-        .fire-btn span { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #0f0; font-size: 12px; font-weight: bold; }
-        
-        /* Joystick área */
-        .joystick-area { position: fixed; bottom: 20px; left: 20px; width: 120px; height: 120px; border-radius: 50%; background: rgba(0,255,0,0.1); border: 2px solid #0f0; z-index: 20; pointer-events: auto; }
-        .joystick-base { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; background: rgba(0,255,0,0.5); border-radius: 50%; border: 2px solid #0f0; transition: transform 0.05s; }
-        
-        /* Daño */
-        .damage-flash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,0,0,0); pointer-events: none; z-index: 5; transition: background 0.05s; }
-        
-        /* Mensajes flotantes */
-        .float-msg { position: fixed; font-family: monospace; font-weight: bold; pointer-events: none; z-index: 25; animation: floatUp 0.6s ease-out forwards; text-shadow: 0 0 3px #0f0; }
-        @keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -120%) scale(1.2); } }
-        
-        @media (max-width: 768px) { .fire-btn { width: 70px; height: 70px; } .joystick-area { width: 100px; height: 100px; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #000; 
+            overflow: hidden; 
+            font-family: 'Courier New', monospace;
+            touch-action: none;
+        }
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        /* HUD externo para estadísticas */
+        .hud-external {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            pointer-events: none;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+        }
+        .hud-panel {
+            background: rgba(0,0,0,0.7);
+            border: 1px solid #0f0;
+            padding: 8px 15px;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 0 10px rgba(0,255,0,0.2);
+        }
+        .hud-panel div {
+            color: #0f0;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+        .hud-panel .value {
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 5px #0f0;
+        }
+        .kill-feed {
+            position: fixed;
+            top: 80px;
+            right: 15px;
+            z-index: 20;
+            pointer-events: none;
+            text-align: right;
+        }
+        .kill-entry {
+            background: rgba(0,0,0,0.8);
+            border-left: 3px solid #0f0;
+            padding: 5px 10px;
+            margin-top: 5px;
+            color: #0f0;
+            font-size: 10px;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @media (max-width: 768px) {
+            .hud-panel { padding: 5px 10px; }
+            .hud-panel .value { font-size: 16px; }
+        }
     </style>
+    <script src="phaser.min.js"></script>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
+    <div id="game-container"></div>
     
-    <div class="hud">
+    <div class="hud-external">
         <div class="hud-panel">
-            <div>NEO·PROXY·COMBAT</div>
-            <div>v0.1</div>
+            <div>NEO-PROXY // COMBAT</div>
+            <div>v1.0 | PHASER EDITION</div>
         </div>
         <div class="hud-panel" style="text-align:right">
             <div>SCORE</div>
-            <div class="score" id="scoreDisplay">0</div>
+            <div class="value" id="scoreValue">0</div>
         </div>
     </div>
     
-    <div class="health-container">
-        <div class="health-bg"><div class="health-fill" id="healthFill" style="width:100%"></div></div>
-        <div class="health-text" id="healthText">INTEGRITY: 100%</div>
-    </div>
-    
-    <div class="crosshair"></div>
-    <div class="damage-flash" id="damageFlash"></div>
-    
-    <!-- Controles táctiles -->
-    <div class="fire-btn" id="fireBtn"><span>🔫</span></div>
-    <div class="joystick-area" id="joystickArea">
-        <div class="joystick-base" id="joystickBase"></div>
-    </div>
-    
+    <div class="kill-feed" id="killFeed"></div>
+
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        // Configuración del juego
+        const config = {
+            type: Phaser.AUTO,
+            parent: 'game-container',
+            width: window.innerWidth,
+            height: window.innerHeight,
+            backgroundColor: '#050505',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            },
+            scale: {
+                mode: Phaser.Scale.RESIZE,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            }
+        };
+
+        const game = new Phaser.Game(config);
         
-        // Dimensiones
-        let width, height;
-        
-        // Jugador
-        let player = { x: 0, y: 0, health: 100, maxHealth: 100, score: 0 };
-        
-        // Enemigos
-        let enemies = [];
-        let bullets = [];
-        let particles = [];
-        
-        // Controles táctiles
-        let moveX = 0, moveY = 0;
-        let joystickActive = false;
-        let joystickCenter = { x: 0, y: 0 };
-        
-        // Disparo
+        // Variables globales
+        let player;
+        let enemies;
+        let bullets;
+        let score = 0;
+        let kills = 0;
+        let joystick;
+        let fireButton;
+        let cursors;
         let lastShot = 0;
-        let shotDelay = 250; // ms
-        let mouseX = width/2, mouseY = height/2;
+        let shotDelay = 200;
+        let playerHealth = 100;
+        let healthBar;
+        let healthText;
+        let wave = 1;
+        let enemiesThisWave = 0;
+        let waveText;
         
-        // Cámara/visión
-        let camera = { x: 0, y: 0 };
-        
-        // Colores neon
-        const neonGreen = '#0f0';
-        const darkGreen = '#030';
-        const enemyColor = '#f44';
-        
-        function resize() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
+        // Efectos visuales
+        let damageFlash;
+        let muzzleFlash;
+
+        function preload() {
+            // Plugin de joystick virtual
+            this.load.plugin('rexvirtualjoystickplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexvirtualjoystickplugin.min.js', true);
+            
+            // Crear texturas procedurales
+            createTextures(this);
         }
         
-        // Inicializar enemigos
-        function spawnEnemy() {
-            const side = Math.floor(Math.random() * 4);
-            let x, y;
-            const range = 300;
-            if (side === 0) { x = -range; y = (Math.random() - 0.5) * range * 2; }
-            else if (side === 1) { x = range; y = (Math.random() - 0.5) * range * 2; }
-            else if (side === 2) { x = (Math.random() - 0.5) * range * 2; y = -range; }
-            else { x = (Math.random() - 0.5) * range * 2; y = range; }
+        function createTextures(scene) {
+            // Textura del jugador (triángulo verde)
+            const playerGraphics = scene.make.graphics({ x: 0, y: 0 });
+            playerGraphics.fillStyle(0x00ff00, 1);
+            playerGraphics.fillTriangle(0, -15, -12, 10, 12, 10);
+            playerGraphics.generateTexture('player', 24, 24);
+            playerGraphics.destroy();
             
-            enemies.push({
-                x: x, y: y,
-                health: 30,
-                maxHealth: 30,
-                size: 20,
-                speed: 1.5,
-                color: '#ff4444'
+            // Textura del enemigo (cuadrado rojo con ojos)
+            const enemyGraphics = scene.make.graphics({ x: 0, y: 0 });
+            enemyGraphics.fillStyle(0xff3300, 1);
+            enemyGraphics.fillRect(-15, -15, 30, 30);
+            enemyGraphics.fillStyle(0xffffff, 1);
+            enemyGraphics.fillCircle(-6, -4, 4);
+            enemyGraphics.fillCircle(6, -4, 4);
+            enemyGraphics.fillStyle(0x000000, 1);
+            enemyGraphics.fillCircle(-5, -3, 2);
+            enemyGraphics.fillCircle(7, -3, 2);
+            enemyGraphics.generateTexture('enemy', 30, 30);
+            enemyGraphics.destroy();
+            
+            // Textura de bala
+            const bulletGraphics = scene.make.graphics({ x: 0, y: 0 });
+            bulletGraphics.fillStyle(0xffaa00, 1);
+            bulletGraphics.fillCircle(0, 0, 4);
+            bulletGraphics.generateTexture('bullet', 8, 8);
+            bulletGraphics.destroy();
+            
+            // Partícula de explosión
+            const particleGraphics = scene.make.graphics({ x: 0, y: 0 });
+            particleGraphics.fillStyle(0xff6600, 1);
+            particleGraphics.fillCircle(0, 0, 5);
+            particleGraphics.generateTexture('particle', 10, 10);
+            particleGraphics.destroy();
+        }
+
+        function create() {
+            const self = this;
+            const centerX = this.game.config.width / 2;
+            const centerY = this.game.config.height / 2;
+            
+            // Grid de fondo
+            const graphics = this.add.graphics();
+            graphics.lineStyle(1, 0x00ff00, 0.15);
+            const gridSize = 50;
+            for (let x = -gridSize; x < this.game.config.width + gridSize; x += gridSize) {
+                graphics.moveTo(x, 0);
+                graphics.lineTo(x, this.game.config.height);
+                graphics.strokePath();
+            }
+            for (let y = -gridSize; y < this.game.config.height + gridSize; y += gridSize) {
+                graphics.moveTo(0, y);
+                graphics.lineTo(this.game.config.width, y);
+                graphics.strokePath();
+            }
+            
+            // Partículas de fondo (efecto de "polvo digital")
+            const particles = this.add.particles(0, 0, 'particle', {
+                x: { min: 0, max: this.game.config.width },
+                y: { min: 0, max: this.game.config.height },
+                lifespan: 4000,
+                speedX: { min: -10, max: 10 },
+                speedY: { min: -10, max: 10 },
+                scale: { start: 0.3, end: 0 },
+                alpha: { start: 0.3, end: 0 },
+                frequency: 200
+            });
+            
+            // Jugador
+            player = this.physics.add.sprite(centerX, centerY, 'player');
+            player.setCollideWorldBounds(true);
+            player.setDepth(10);
+            player.body.setSize(20, 20);
+            
+            // Grupos
+            enemies = this.physics.add.group();
+            bullets = this.physics.add.group();
+            
+            // Barra de vida (dentro del juego)
+            healthBar = this.add.graphics();
+            healthText = this.add.text(20, 20, 'INTEGRITY: 100%', {
+                fontSize: '12px',
+                fill: '#0f0',
+                fontFamily: '"Courier New", monospace'
+            }).setScrollFactor(0).setDepth(20);
+            
+            // Texto de wave
+            waveText = this.add.text(centerX, 50, `WAVE ${wave}`, {
+                fontSize: '24px',
+                fill: '#0f0',
+                fontFamily: '"Courier New", monospace',
+                stroke: '#000',
+                strokeThickness: 3
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(20);
+            waveText.setAlpha(0);
+            
+            // Colisiones
+            this.physics.add.collider(player, enemies, (p, e) => takeDamage(self, 10), null, this);
+            this.physics.add.collider(bullets, enemies, (b, e) => hitEnemy(self, b, e), null, this);
+            
+            // Joystick táctil
+            if (this.plugins.get('rexvirtualjoystickplugin')) {
+                joystick = this.plugins.get('rexvirtualjoystickplugin').add(this, {
+                    x: 100,
+                    y: this.game.config.height - 100,
+                    radius: 60,
+                    base: this.add.circle(0, 0, 60, 0x00ff00, 0.2),
+                    thumb: this.add.circle(0, 0, 35, 0x00ff00, 0.4),
+                    dir: '8dir',
+                    forceMin: 10
+                });
+            }
+            
+            // Botón de disparo
+            fireButton = this.add.circle(this.game.config.width - 80, this.game.config.height - 80, 50, 0xff0000, 0.3)
+                .setInteractive()
+                .setScrollFactor(0)
+                .setDepth(20);
+            fireButton.on('pointerdown', () => shoot(self));
+            
+            // Texto del botón
+            this.add.text(this.game.config.width - 80, this.game.config.height - 80, 'FIRE', {
+                fontSize: '12px',
+                fill: '#fff',
+                fontFamily: '"Courier New", monospace'
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(21);
+            
+            // Efecto de daño
+            damageFlash = this.add.rectangle(0, 0, this.game.config.width, this.game.config.height, 0xff0000, 0)
+                .setOrigin(0)
+                .setScrollFactor(0)
+                .setDepth(15);
+            
+            // Spawn inicial de enemigos
+            spawnWave(this);
+            
+            // Instrucciones
+            this.time.delayedCall(1000, () => {
+                showMessage(this, "JOYSTICK → MOVER", 0x00ff00);
+                showMessage(this, "BOTÓN ROJO → DISPARAR", 0xff6600);
             });
         }
         
-        // Disparar
-        function shoot(targetX, targetY) {
+        function spawnWave(scene) {
+            const enemyCount = 3 + Math.floor(wave * 0.5);
+            enemiesThisWave = enemyCount;
+            
+            for (let i = 0; i < enemyCount; i++) {
+                const side = Math.floor(Math.random() * 4);
+                let x, y;
+                const margin = 100;
+                if (side === 0) { x = Phaser.Math.Between(-margin, scene.game.config.width + margin); y = -margin; }
+                else if (side === 1) { x = Phaser.Math.Between(-margin, scene.game.config.width + margin); y = scene.game.config.height + margin; }
+                else if (side === 2) { x = -margin; y = Phaser.Math.Between(-margin, scene.game.config.height + margin); }
+                else { x = scene.game.config.width + margin; y = Phaser.Math.Between(-margin, scene.game.config.height + margin); }
+                
+                const enemy = scene.physics.add.sprite(x, y, 'enemy');
+                enemy.setData('health', 40 + wave * 5);
+                enemy.setData('maxHealth', 40 + wave * 5);
+                enemy.setVelocity(Phaser.Math.Between(-50, 50), Phaser.Math.Between(-50, 50));
+                enemies.add(enemy);
+            }
+            
+            // Animación de wave
+            waveText.setText(`WAVE ${wave}`);
+            waveText.setAlpha(1);
+            scene.tweens.add({
+                targets: waveText,
+                alpha: 0,
+                y: waveText.y - 50,
+                duration: 1500,
+                ease: 'Power2'
+            });
+        }
+        
+        function shoot(scene) {
             const now = Date.now();
             if (now - lastShot < shotDelay) return;
             lastShot = now;
             
-            // Calcular dirección hacia el cursor/mira
-            const worldTarget = {
-                x: (targetX - width/2) + camera.x,
-                y: (targetY - height/2) + camera.y
-            };
+            const bullet = scene.physics.add.sprite(player.x, player.y, 'bullet');
+            bullet.setDepth(5);
             
-            const dx = worldTarget.x - player.x;
-            const dy = worldTarget.y - player.y;
-            const len = Math.hypot(dx, dy);
-            if (len === 0) return;
+            // Dirección hacia el mouse/enemigo más cercano
+            let angle = player.rotation - Math.PI / 2;
             
-            bullets.push({
-                x: player.x, y: player.y,
-                vx: (dx / len) * 8,
-                vy: (dy / len) * 8,
-                life: 100
+            // Encontrar enemigo más cercano para apuntar automáticamente
+            let closestEnemy = null;
+            let closestDist = Infinity;
+            enemies.getChildren().forEach(enemy => {
+                const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestEnemy = enemy;
+                }
             });
             
+            if (closestEnemy && closestDist < 400) {
+                angle = Phaser.Math.Angle.Between(player.x, player.y, closestEnemy.x, closestEnemy.y);
+            }
+            
+            const speed = 500;
+            scene.physics.velocityFromRotation(angle, speed, bullet.body.velocity);
+            
+            // Auto-destrucción de bala
+            scene.time.delayedCall(2000, () => bullet.destroy());
+            
             // Efecto de disparo
-            addFloatingText("🔫", targetX, targetY, neonGreen);
+            if (muzzleFlash) muzzleFlash.destroy();
+            muzzleFlash = scene.add.circle(player.x, player.y, 8, 0xffaa00, 0.8);
+            scene.time.delayedCall(50, () => muzzleFlash.destroy());
         }
         
-        function addFloatingText(text, x, y, color) {
-            const div = document.createElement('div');
-            div.className = 'float-msg';
-            div.textContent = text;
-            div.style.left = x + 'px';
-            div.style.top = y + 'px';
-            div.style.color = color;
-            document.body.appendChild(div);
-            setTimeout(() => div.remove(), 600);
-        }
-        
-        function takeDamage(amount) {
-            player.health = Math.max(0, player.health - amount);
-            const healthPercent = (player.health / player.maxHealth) * 100;
-            document.getElementById('healthFill').style.width = healthPercent + '%';
-            document.getElementById('healthText').innerHTML = `INTEGRITY: ${Math.floor(healthPercent)}%`;
+        function hitEnemy(scene, bullet, enemy) {
+            bullet.destroy();
             
-            // Efecto visual de daño
-            const flash = document.getElementById('damageFlash');
-            flash.style.background = 'rgba(255,0,0,0.4)';
-            setTimeout(() => flash.style.background = 'rgba(255,0,0,0)', 150);
+            const enemyHealth = enemy.getData('health') - 25;
+            enemy.setData('health', enemyHealth);
             
-            if (player.health <= 0) {
-                gameOver();
-            }
-        }
-        
-        function gameOver() {
-            addFloatingText("GAME OVER", width/2, height/2, '#ff0000');
-            player.health = player.maxHealth;
-            player.score = 0;
-            enemies = [];
-            bullets = [];
-            document.getElementById('scoreDisplay').innerHTML = '0';
-            for (let i = 0; i < 5; i++) spawnEnemy();
-            const healthPercent = 100;
-            document.getElementById('healthFill').style.width = '100%';
-            document.getElementById('healthText').innerHTML = 'INTEGRITY: 100%';
-        }
-        
-        function update() {
-            // Movimiento del jugador con joystick
-            if (moveX !== 0 || moveY !== 0) {
-                const len = Math.hypot(moveX, moveY);
-                if (len > 0) {
-                    player.x += (moveX / len) * 4;
-                    player.y += (moveY / len) * 4;
-                }
-            }
+            // Mostrar daño
+            const damageText = scene.add.text(enemy.x, enemy.y - 20, '-25', {
+                fontSize: '14px',
+                fill: '#ff6600',
+                fontFamily: '"Courier New", monospace'
+            });
+            scene.tweens.add({
+                targets: damageText,
+                y: damageText.y - 30,
+                alpha: 0,
+                duration: 500,
+                onComplete: () => damageText.destroy()
+            });
             
-            // Actualizar cámara (sigue al jugador)
-            camera.x = player.x;
-            camera.y = player.y;
-            
-            // Actualizar balas
-            for (let i = 0; i < bullets.length; i++) {
-                bullets[i].x += bullets[i].vx;
-                bullets[i].y += bullets[i].vy;
-                bullets[i].life--;
-                if (bullets[i].life <= 0 || Math.abs(bullets[i].x) > 800 || Math.abs(bullets[i].y) > 800) {
-                    bullets.splice(i, 1);
-                    i--;
-                    continue;
-                }
+            if (enemyHealth <= 0) {
+                // Efecto de explosión
+                const explosion = scene.add.circle(enemy.x, enemy.y, 5, 0xff6600, 1);
+                scene.tweens.add({
+                    targets: explosion,
+                    scale: 3,
+                    alpha: 0,
+                    duration: 200,
+                    onComplete: () => explosion.destroy()
+                });
                 
-                // Colisión con enemigos
-                for (let j = 0; j < enemies.length; j++) {
-                    const e = enemies[j];
-                    const dx = bullets[i].x - e.x;
-                    const dy = bullets[i].y - e.y;
-                    const dist = Math.hypot(dx, dy);
-                    if (dist < e.size) {
-                        e.health -= 15;
-                        bullets.splice(i, 1);
-                        i--;
-                        
-                        if (e.health <= 0) {
-                            player.score += 100;
-                            document.getElementById('scoreDisplay').innerHTML = player.score;
-                            addFloatingText("+100", width/2 + (e.x - camera.x), height/2 + (e.y - camera.y), '#ffaa00');
-                            enemies.splice(j, 1);
-                            spawnEnemy(); // Reponer enemigo
-                        }
-                        break;
+                enemy.destroy();
+                score += 100;
+                kills++;
+                updateScoreUI();
+                
+                // Kill feed
+                addKillFeed();
+                
+                enemiesThisWave--;
+                if (enemiesThisWave <= 0 && enemies.getLength() === 0) {
+                    wave++;
+                    spawnWave(scene);
+                } else {
+                    // Reponer enemigo si hay pocos
+                    if (enemies.getLength() < 2 + Math.floor(wave * 0.3)) {
+                        spawnWave(scene);
                     }
                 }
+            } else {
+                // Flash de daño en enemigo
+                enemy.setTint(0xff8888);
+                scene.time.delayedCall(100, () => enemy.clearTint());
+                
+                // Empujar enemigo
+                const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+                scene.physics.velocityFromRotation(angle, 150, enemy.body.velocity);
+            }
+        }
+        
+        function takeDamage(scene, amount) {
+            playerHealth = Math.max(0, playerHealth - amount);
+            updateHealthUI(scene);
+            
+            // Efecto de daño
+            damageFlash.setFillStyle(0xff0000, 0.4);
+            scene.time.delayedCall(100, () => damageFlash.setFillStyle(0xff0000, 0));
+            
+            // Empujar al jugador
+            if (player.body) {
+                const angle = Math.random() * Math.PI * 2;
+                scene.physics.velocityFromRotation(angle, 200, player.body.velocity);
             }
             
-            // Actualizar enemigos (movimiento hacia el jugador)
-            for (let i = 0; i < enemies.length; i++) {
-                const e = enemies[i];
-                const dx = player.x - e.x;
-                const dy = player.y - e.y;
-                const dist = Math.hypot(dx, dy);
-                if (dist > 0) {
-                    e.x += (dx / dist) * e.speed;
-                    e.y += (dy / dist) * e.speed;
+            if (playerHealth <= 0) {
+                gameOver(scene);
+            }
+        }
+        
+        function updateHealthUI(scene) {
+            const percent = playerHealth;
+            healthText.setText(`INTEGRITY: ${Math.floor(percent)}%`);
+            healthBar.clear();
+            healthBar.fillStyle(0x00ff00, 1);
+            healthBar.fillRect(20, 35, (percent / 100) * 150, 6);
+            healthBar.fillStyle(0x330000, 1);
+            healthBar.fillRect(20 + (percent / 100) * 150, 35, 150 - (percent / 100) * 150, 6);
+            
+            if (percent < 30) {
+                healthText.setColor('#ff0000');
+                // Efecto de latido
+                scene.tweens.add({
+                    targets: healthText,
+                    scaleX: 1.1,
+                    scaleY: 1.1,
+                    duration: 100,
+                    yoyo: true
+                });
+            } else {
+                healthText.setColor('#0f0');
+            }
+        }
+        
+        function updateScoreUI() {
+            document.getElementById('scoreValue').innerHTML = score;
+        }
+        
+        function addKillFeed() {
+            const feed = document.getElementById('killFeed');
+            const entry = document.createElement('div');
+            entry.className = 'kill-entry';
+            entry.innerHTML = `+100 // ENEMY ELIMINATED`;
+            feed.appendChild(entry);
+            setTimeout(() => entry.remove(), 3000);
+        }
+        
+        function showMessage(scene, text, color) {
+            const msg = scene.add.text(scene.game.config.width / 2, scene.game.config.height / 2, text, {
+                fontSize: '18px',
+                fill: '#' + color.toString(16),
+                fontFamily: '"Courier New", monospace',
+                stroke: '#000',
+                strokeThickness: 2
+            }).setOrigin(0.5).setScrollFactor(0);
+            scene.tweens.add({
+                targets: msg,
+                y: msg.y - 80,
+                alpha: 0,
+                duration: 1500,
+                onComplete: () => msg.destroy()
+            });
+        }
+        
+        function gameOver(scene) {
+            showMessage(scene, "GAME OVER", 0xff0000);
+            player.destroy();
+            enemies.clear(true, true);
+            scene.time.delayedCall(2000, () => {
+                playerHealth = 100;
+                score = 0;
+                kills = 0;
+                wave = 1;
+                updateScoreUI();
+                const centerX = scene.game.config.width / 2;
+                const centerY = scene.game.config.height / 2;
+                player = scene.physics.add.sprite(centerX, centerY, 'player');
+                player.setCollideWorldBounds(true);
+                player.body.setSize(20, 20);
+                scene.physics.add.collider(player, enemies, (p, e) => takeDamage(scene, 10), null, scene);
+                spawnWave(scene);
+                updateHealthUI(scene);
+            });
+        }
+        
+        function update(time, delta) {
+            if (!player || !player.body) return;
+            
+            // Movimiento con joystick
+            if (joystick && joystick.enable) {
+                const speed = 250;
+                const forceX = joystick.forceX || 0;
+                const forceY = joystick.forceY || 0;
+                player.body.setVelocity(forceX * speed, forceY * speed);
+                
+                // Rotación hacia el movimiento
+                if (Math.abs(forceX) > 0.1 || Math.abs(forceY) > 0.1) {
+                    player.setRotation(Math.atan2(forceY, forceX) + Math.PI / 2);
                 }
-                
-                // Daño por contacto
-                if (dist < 25) {
-                    takeDamage(1);
-                    // Empujar al enemigo
-                    e.x -= (dx / dist) * 15;
-                    e.y -= (dy / dist) * 15;
-                }
             }
             
-            // Mantener enemigos en rango
-            if (enemies.length < 3) {
-                spawnEnemy();
-            }
+            // IA de enemigos: perseguir al jugador
+            enemies.getChildren().forEach(enemy => {
+                const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+                const speed = 80 + wave * 5;
+                this.physics.velocityFromRotation(angle, speed, enemy.body.velocity);
+            });
+            
+            // Actualizar barra de vida UI
+            updateHealthUI(this);
         }
-        
-        function draw() {
-            ctx.clearRect(0, 0, width, height);
-            
-            // Fondo tipo grid
-            ctx.strokeStyle = neonGreen;
-            ctx.lineWidth = 1;
-            const gridSize = 50;
-            const offsetX = camera.x % gridSize;
-            const offsetY = camera.y % gridSize;
-            for (let x = -offsetX; x < width + gridSize; x += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, height);
-                ctx.stroke();
-            }
-            for (let y = -offsetY; y < height + gridSize; y += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(width, y);
-                ctx.stroke();
-            }
-            
-            // Dibujar enemigos
-            for (const e of enemies) {
-                const screenX = width/2 + (e.x - camera.x);
-                const screenY = height/2 + (e.y - camera.y);
-                
-                // Sombra/glow
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#ff0000';
-                
-                // Cuerpo del enemigo
-                ctx.fillStyle = e.color;
-                ctx.beginPath();
-                ctx.rect(screenX - e.size/2, screenY - e.size/2, e.size, e.size);
-                ctx.fill();
-                
-                // Ojos
-                ctx.fillStyle = '#fff';
-                ctx.beginPath();
-                ctx.arc(screenX - 5, screenY - 3, 3, 0, Math.PI * 2);
-                ctx.arc(screenX + 5, screenY - 3, 3, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#000';
-                ctx.beginPath();
-                ctx.arc(screenX - 5 + (Math.random() * 2 - 1), screenY - 3, 1.5, 0, Math.PI * 2);
-                ctx.arc(screenX + 5 + (Math.random() * 2 - 1), screenY - 3, 1.5, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Barra de salud del enemigo
-                const healthPercent = e.health / e.maxHealth;
-                ctx.fillStyle = '#300';
-                ctx.fillRect(screenX - 15, screenY - 18, 30, 4);
-                ctx.fillStyle = '#f00';
-                ctx.fillRect(screenX - 15, screenY - 18, 30 * healthPercent, 4);
-            }
-            
-            // Dibujar balas
-            for (const b of bullets) {
-                const screenX = width/2 + (b.x - camera.x);
-                const screenY = height/2 + (b.y - camera.y);
-                ctx.fillStyle = '#ffaa00';
-                ctx.shadowBlur = 5;
-                ctx.shadowColor = '#ffaa00';
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, 3, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            
-            // Dibujar jugador (triángulo)
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = neonGreen;
-            ctx.fillStyle = neonGreen;
-            const px = width/2;
-            const py = height/2;
-            ctx.beginPath();
-            ctx.moveTo(px, py - 15);
-            ctx.lineTo(px - 12, py + 10);
-            ctx.lineTo(px, py + 5);
-            ctx.lineTo(px + 12, py + 10);
-            ctx.fill();
-            
-            // Escudo visual
-            ctx.strokeStyle = neonGreen;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(px, py, 20, 0, Math.PI * 2);
-            ctx.stroke();
-            
-            ctx.shadowBlur = 0;
-            
-            // Ammo indicator
-            ctx.font = '12px "Courier New", monospace';
-            ctx.fillStyle = neonGreen;
-            ctx.fillText(`AMMO: INF`, width - 80, 40);
-            ctx.fillText(`KILLS: ${Math.floor(player.score/100)}`, width - 80, 60);
-        }
-        
-        // Controles táctiles
-        const joystickArea = document.getElementById('joystickArea');
-        const joystickBase = document.getElementById('joystickBase');
-        
-        function handleTouchStart(e) {
-            e.preventDefault();
-            const rect = joystickArea.getBoundingClientRect();
-            joystickCenter.x = rect.left + rect.width/2;
-            joystickCenter.y = rect.top + rect.height/2;
-            joystickActive = true;
-            handleTouchMove(e);
-        }
-        
-        function handleTouchMove(e) {
-            e.preventDefault();
-            if (!joystickActive) return;
-            const touch = e.touches[0];
-            const dx = touch.clientX - joystickCenter.x;
-            const dy = touch.clientY - joystickCenter.y;
-            const maxDist = 40;
-            let dist = Math.hypot(dx, dy);
-            if (dist > maxDist) dist = maxDist;
-            moveX = dx;
-            moveY = dy;
-            const angle = Math.atan2(dy, dx);
-            const stickX = Math.cos(angle) * dist;
-            const stickY = Math.sin(angle) * dist;
-            joystickBase.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
-        }
-        
-        function handleTouchEnd(e) {
-            e.preventDefault();
-            joystickActive = false;
-            moveX = 0;
-            moveY = 0;
-            joystickBase.style.transform = 'translate(-50%, -50%)';
-        }
-        
-        joystickArea.addEventListener('touchstart', handleTouchStart);
-        joystickArea.addEventListener('touchmove', handleTouchMove);
-        joystickArea.addEventListener('touchend', handleTouchEnd);
-        
-        // Disparo táctil
-        const fireBtn = document.getElementById('fireBtn');
-        fireBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            shoot(width/2, height/2);
+
+        // Redimensionamiento
+        window.addEventListener('resize', () => {
+            game.scale.resize(window.innerWidth, window.innerHeight);
         });
-        fireBtn.addEventListener('mousedown', () => shoot(width/2, height/2));
-        
-        // Mouse/touch para apuntar (en móvil, la mira está centrada)
-        canvas.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-        });
-        
-        // Bucle del juego
-        resize();
-        window.addEventListener('resize', resize);
-        
-        // Spawn inicial
-        for (let i = 0; i < 4; i++) spawnEnemy();
-        
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-        
-        gameLoop();
-        
-        // Instrucciones
-        setTimeout(() => {
-            addFloatingText("USAR JOYSTICK IZQUIERDO", width/2, height - 100, neonGreen);
-            addFloatingText("BOTÓN ROJO PARA DISPARAR", width/2, height - 70, neonGreen);
-        }, 500);
     </script>
 </body>
 </html>
