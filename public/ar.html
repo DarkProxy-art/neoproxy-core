@@ -474,9 +474,30 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
         
-        // Initialize game
-        async function init() {
-            await initCamera();
+        // Start camera on button click
+        async function startCamera() {
+            const startOverlay = document.getElementById('start-overlay');
+            const startButton = document.getElementById('start-button');
+            
+            // Show loading state
+            startButton.textContent = 'INITIALIZING...';
+            startButton.disabled = true;
+            
+            try {
+                await initCamera();
+                // Hide overlay after camera starts
+                startOverlay.style.display = 'none';
+                // Initialize game after camera is ready
+                initGame();
+            } catch (error) {
+                console.error('Failed to start camera:', error);
+                startButton.textContent = 'RETRY';
+                startButton.disabled = false;
+            }
+        }
+        
+        // Separate game initialization from camera
+        function initGame() {
             initThreeJS();
             initEnemies();
             animate();
