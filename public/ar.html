@@ -2,25 +2,26 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEO·PROXY COMBAT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NEO·PROXY COMBAT // GLITCH ARENA</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
-        
+
         body {
-            font-family: 'Courier New', monospace;
+            font-family: 'Courier New', 'SF Mono', monospace;
             background: #000;
-            color: #cc0000;
             overflow: hidden;
-            position: relative;
             width: 100vw;
             height: 100vh;
+            position: fixed;
         }
-        
+
         #camera-feed {
             position: absolute;
             top: 0;
@@ -29,8 +30,9 @@
             height: 100%;
             object-fit: cover;
             z-index: 1;
+            filter: brightness(1.05) contrast(1.1);
         }
-        
+
         #game-canvas {
             position: absolute;
             top: 0;
@@ -38,507 +40,658 @@
             width: 100%;
             height: 100%;
             z-index: 2;
+            display: block;
         }
-        
+
+        /* HUD elements */
         .hud {
             position: absolute;
             z-index: 3;
             pointer-events: none;
             font-family: 'Courier New', monospace;
-            color: #cc0000;
-            text-shadow: 0 0 10px #cc0000;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.65);
+            border-left: 3px solid #ff2a2a;
+            padding: 8px 16px;
+            color: #ff3a3a;
+            text-shadow: 0 0 6px #ff0000;
+            font-size: 14px;
         }
-        
+
+        .top-bar {
+            top: 18px;
+            left: 18px;
+            right: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            border-left: none;
+            border-right: 3px solid #ff2a2a;
+            border-bottom: 1px solid #ff2a2a;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .score-label {
+            font-size: 1.3rem;
+            letter-spacing: 2px;
+        }
+
+        .bottom-left {
+            bottom: 20px;
+            left: 20px;
+            font-size: 12px;
+            border-left: 3px solid #ff2a2a;
+        }
+
+        .bottom-right {
+            bottom: 20px;
+            right: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        /* Crosshair */
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0.9;
+            transition: 0.05s linear;
+        }
+        .crosshair svg {
+            filter: drop-shadow(0 0 3px #ff0000);
+        }
+
+        /* Reload indicator */
+        .reload-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: monospace;
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: black;
+            padding: 12px 24px;
+            border: 2px solid #ff0000;
+            color: #ff5555;
+            z-index: 20;
+            pointer-events: none;
+            white-space: nowrap;
+            text-shadow: 0 0 12px red;
+            letter-spacing: 4px;
+            backdrop-filter: blur(8px);
+            display: none;
+            animation: pulse 0.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.7; text-shadow: 0 0 4px red; }
+            100% { opacity: 1; text-shadow: 0 0 16px #ff4444; }
+        }
+
+        .hit-flash {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ff0000;
+            background: rgba(0,0,0,0.7);
+            padding: 12px 28px;
+            border: 1px solid #ff0000;
+            white-space: nowrap;
+            font-family: monospace;
+            z-index: 15;
+            pointer-events: none;
+            animation: fadeOutUp 0.9s forwards;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        @keyframes fadeOutUp {
+            0% { opacity: 1; transform: translate(-50%, -50%); }
+            100% { opacity: 0; transform: translate(-50%, -80%); }
+        }
+
+        /* START OVERLAY — CYBERPUNK GLITCH */
         #start-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9);
+            background: radial-gradient(circle at center, #0a0101 0%, #000000 100%);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 10;
-            font-family: 'Courier New', monospace;
+            flex-direction: column;
+            z-index: 100;
+            backdrop-filter: blur(2px);
+            font-family: monospace;
+            transition: 0.4s ease;
         }
-        
+
+        .glitch-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #ff2a2a;
+            text-shadow: 3px 3px 0 #7a0000, -2px -2px 0 #ff8888;
+            margin-bottom: 40px;
+            letter-spacing: 6px;
+            animation: textGlitch 1.2s infinite;
+        }
+
+        @keyframes textGlitch {
+            0% { text-shadow: 2px 2px 0 #aa0000; }
+            25% { text-shadow: -2px -1px 0 #ff4444, 1px 1px 0 #660000; }
+            50% { text-shadow: 3px -1px 0 #aa2a2a; }
+            75% { text-shadow: -1px 2px 0 #ff1a1a; }
+            100% { text-shadow: 2px 2px 0 #aa0000; }
+        }
+
         #start-button {
-            background: #000;
-            color: #cc0000;
-            border: 2px solid #cc0000;
-            padding: 20px 40px;
-            font-family: 'Courier New', monospace;
-            font-size: 18px;
+            background: #000000cc;
+            color: #ff2a2a;
+            border: 2px solid #ff2a2a;
+            padding: 16px 42px;
+            font-family: monospace;
+            font-size: 1.4rem;
             font-weight: bold;
             cursor: pointer;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            transition: all 0.3s ease;
+            letter-spacing: 5px;
+            transition: 0.2s;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 0 12px rgba(255,0,0,0.4);
         }
-        
+
         #start-button:hover {
-            background: #cc0000;
-            color: #000;
-            box-shadow: 0 0 20px #cc0000;
+            background: #ff2a2a;
+            color: black;
+            box-shadow: 0 0 28px #ff2a2a;
+            transform: scale(0.98);
         }
-        
-        #start-button:active {
-            transform: scale(0.95);
+
+        .instruction-tag {
+            margin-top: 30px;
+            color: #aa2222;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 16px;
         }
-        
-        .top-bar {
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 20px;
-            border: 1px solid #cc0000;
-        }
-        
-        .crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 3;
-            pointer-events: none;
-        }
-        
-        .bottom-left {
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 20px;
-            border: 1px solid #cc0000;
-        }
-        
-        .bottom-right {
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 20px;
-            border: 1px solid #cc0000;
-        }
-        
-        .hit-flash {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 24px;
-            font-weight: bold;
-            z-index: 4;
-            pointer-events: none;
-            animation: fadeOut 1s forwards;
-        }
-        
-        @keyframes fadeOut {
-            0% { opacity: 1; }
-            100% { opacity: 0; }
-        }
-        
-        .reload-indicator {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 18px;
-            z-index: 4;
-            pointer-events: none;
-            display: none;
+
+        @media (max-width: 600px) {
+            .glitch-title { font-size: 1.8rem; letter-spacing: 3px; }
+            #start-button { padding: 12px 28px; font-size: 1.1rem; }
+            .bottom-right { font-size: 14px; }
+            .hit-flash { font-size: 1rem; padding: 6px 14px; white-space: nowrap; }
+            .reload-indicator { font-size: 1.2rem; padding: 8px 18px; }
         }
     </style>
 </head>
 <body>
-    <video id="camera-feed" autoplay playsinline></video>
-    <canvas id="game-canvas"></canvas>
-    
-    <div class="hud top-bar">
-        <div>NEO·PROXY COMBAT v0.1</div>
-        <div id="score">SCORE: 0</div>
-    </div>
-    
-    <div class="crosshair">
-        <svg width="50" height="50" viewBox="0 0 50 50">
-            <line x1="25" y1="10" x2="25" y2="40" stroke="#cc0000" stroke-width="2"/>
-            <line x1="10" y1="25" x2="40" y2="25" stroke="#cc0000" stroke-width="2"/>
-            <circle cx="25" cy="25" r="8" fill="none" stroke="#cc0000" stroke-width="1"/>
-        </svg>
-    </div>
-    
-    <div class="hud bottom-left">
-        <div>OPERATOR: DARKPROXY</div>
-    </div>
-    
-    <div class="hud bottom-right">
-        <div id="ammo">AMMO: 12/12</div>
-    </div>
-    
-    <div id="reload-indicator" class="reload-indicator">RELOADING...</div>
-    
-    <div id="start-overlay">
-        <button id="start-button">Initialize AR Link</button>
-    </div>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script>
-        // Game state
-        let scene, camera, renderer, raycaster, enemies = [];
+
+<video id="camera-feed" autoplay playsinline muted></video>
+<canvas id="game-canvas"></canvas>
+
+<div class="hud top-bar">
+    <div>⧉ NEO·PROXY // FRAGMENTUM</div>
+    <div id="score" class="score-label">SCORE: 0</div>
+</div>
+
+<div class="crosshair">
+    <svg width="48" height="48" viewBox="0 0 48 48">
+        <line x1="24" y1="8" x2="24" y2="20" stroke="#ff3333" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="24" y1="28" x2="24" y2="40" stroke="#ff3333" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="8" y1="24" x2="20" y2="24" stroke="#ff3333" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="28" y1="24" x2="40" y2="24" stroke="#ff3333" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="24" cy="24" r="7" fill="none" stroke="#ff4444" stroke-width="1.5" stroke-dasharray="2 2"/>
+    </svg>
+</div>
+
+<div class="hud bottom-left">
+    <div>⚡ OPERATOR: DARKPROXY // GLITCH ACTIVE</div>
+    <div style="font-size: 10px;">⟳ R | TAP/CLICK to TERMINATE</div>
+</div>
+
+<div class="hud bottom-right">
+    <div id="ammo">🔫 AMMO: 12 / 12</div>
+</div>
+
+<div id="reload-indicator" class="reload-indicator">⟳ RELOADING... ⟳</div>
+<div id="start-overlay">
+    <div class="glitch-title">// NEO·PROXY COMBAT \\</div>
+    <button id="start-button">⟡ INITIALIZE AR LINK ⟡</button>
+    <div class="instruction-tag">[ CAMERA ACCESS REQUIRED ] — ELIMINATE GLITCH ENTITIES</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+    (function(){
+        // ------------------- GLOBAL STATE -------------------
+        let scene, camera, renderer, raycaster;
+        let enemies = [];            // stores enemy meshes
         let score = 0;
         let ammo = 12;
-        let maxAmmo = 12;
+        const MAX_AMMO = 12;
         let isReloading = false;
-        let cameraStream = null;
-        let gltfLoader = null;
-        let gltfModel = null;
-        let useGLB = true; // Use lightweight GLB (1.8MB)
+        let cameraStreamActive = false;
+        let animationId = null;
+        let gameActive = false;
         
-        // Initialize camera feed
-        async function initCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' },
-                    audio: false
-                });
-                const video = document.getElementById('camera-feed');
-                video.srcObject = stream;
-                cameraStream = stream;
-            } catch (error) {
-                console.log('Camera access denied, using black background');
+        // DOM elements
+        const scoreEl = document.getElementById('score');
+        const ammoEl = document.getElementById('ammo');
+        const reloadIndicator = document.getElementById('reload-indicator');
+        const startOverlay = document.getElementById('start-overlay');
+        const startBtn = document.getElementById('start-button');
+        const videoFeed = document.getElementById('camera-feed');
+        
+        // ------------------- CREATE GLITCH ENEMIES (NO EXTERNAL ASSETS) -------------------
+        // 3 different archetypes: torusKnot (wireframe), icosahedron (emissive), dodecahedron (glitch metal)
+        function getRandomEnemyGeometry() {
+            const r = Math.random();
+            if (r < 0.4) {
+                // Twisted knot — aggressive look
+                const geom = new THREE.TorusKnotGeometry(0.42, 0.12, 140, 12, 3, 4);
+                return geom;
+            } else if (r < 0.7) {
+                // Icosahedron - angular anomaly
+                const geom = new THREE.IcosahedronGeometry(0.38, 0);
+                return geom;
+            } else {
+                // Dodecahedron + extra spikes vibe (octahedron variant for edge)
+                const geom = new THREE.DodecahedronGeometry(0.36, 0);
+                return geom;
             }
         }
         
-        // Initialize Three.js
-        function initThreeJS() {
+        function createEnemy() {
+            let geometry = getRandomEnemyGeometry();
+            // Glow / emissive red material with slight roughness variation
+            const material = new THREE.MeshStandardMaterial({
+                color: 0xcc1a1a,
+                emissive: 0x441111,
+                emissiveIntensity: 0.55,
+                metalness: 0.7,
+                roughness: 0.35,
+                flatShading: false
+            });
+            
+            const enemyMesh = new THREE.Mesh(geometry, material);
+            
+            // random position within frustum range (camera at Z=5, visible from Z=1.5 to 4.5)
+            enemyMesh.position.x = (Math.random() - 0.5) * 7.2;   // -3.6 to 3.6
+            enemyMesh.position.y = (Math.random() - 0.5) * 5.2;   // -2.6 to 2.6
+            enemyMesh.position.z = 2 + Math.random() * 3.2;       // 2.0 to 5.2
+            // random rotation offset
+            enemyMesh.rotation.x = Math.random() * Math.PI * 2;
+            enemyMesh.rotation.y = Math.random() * Math.PI * 2;
+            enemyMesh.rotation.z = Math.random() * Math.PI * 2;
+            
+            // metadata for glitch behavior
+            enemyMesh.userData = {
+                type: 'GLITCH_ENTITY',
+                rotationSpeed: 0.008 + Math.random() * 0.012,
+                jitterIntensity: 0.0025,
+                lastGlitchTime: Date.now(),
+                glitchInterval: 1800 + Math.random() * 1800, // 1.8-3.6 sec
+                originalScale: 1,
+                pulsePhase: Math.random() * Math.PI * 2,
+                wireframeToggle: false
+            };
+            
+            // apply initial scale (some slight variance)
+            const randScale = 0.85 + Math.random() * 0.5;
+            enemyMesh.scale.set(randScale, randScale, randScale);
+            enemyMesh.userData.originalScale = randScale;
+            
+            return enemyMesh;
+        }
+        
+        // populate initial enemies (keep between 5 and 7)
+        function initEnemies(count = 6) {
+            // clear existing
+            enemies.forEach(e => scene.remove(e));
+            enemies = [];
+            for(let i = 0; i < count; i++) {
+                const enemy = createEnemy();
+                scene.add(enemy);
+                enemies.push(enemy);
+            }
+        }
+        
+        // spawn a single new enemy after elimination
+        function spawnNewEnemy() {
+            const newEnemy = createEnemy();
+            scene.add(newEnemy);
+            enemies.push(newEnemy);
+        }
+        
+        // ------------------- ELIMINATION & GAME MECHANICS -------------------
+        function showHitFlash() {
+            const flashDiv = document.createElement('div');
+            flashDiv.className = 'hit-flash';
+            flashDiv.textContent = '⚡ ECO DISUELTO ⚡';
+            document.body.appendChild(flashDiv);
+            setTimeout(() => {
+                if(flashDiv && flashDiv.remove) flashDiv.remove();
+            }, 800);
+        }
+        
+        async function logKillMock() {
+            // silent mock - no external API needed but keep game self-contained
+            if (typeof window !== 'undefined') {
+                // just for immersion, store in console
+                console.log(`[PROXY_LOG] KILL | SCORE: ${score} | TIMESTAMP: ${new Date().toISOString()}`);
+            }
+        }
+        
+        function updateUI() {
+            scoreEl.textContent = `SCORE: ${score}`;
+            ammoEl.textContent = `🔫 AMMO: ${ammo} / ${MAX_AMMO}`;
+        }
+        
+        function eliminateEnemy(enemyMesh) {
+            if (!enemyMesh || !enemyMesh.parent) return false;
+            
+            // remove from scene & array
+            scene.remove(enemyMesh);
+            const idx = enemies.indexOf(enemyMesh);
+            if(idx !== -1) enemies.splice(idx, 1);
+            
+            // update score & ui
+            score += 100;
+            updateUI();
+            showHitFlash();
+            logKillMock();
+            
+            // respawn new enemy after slight delay to keep field dynamic
+            setTimeout(() => {
+                if(gameActive) {
+                    spawnNewEnemy();
+                }
+            }, 400);
+            return true;
+        }
+        
+        function reloadGun() {
+            if(isReloading) return;
+            if(ammo === MAX_AMMO) return;
+            
+            isReloading = true;
+            reloadIndicator.style.display = 'flex';
+            
+            setTimeout(() => {
+                ammo = MAX_AMMO;
+                isReloading = false;
+                reloadIndicator.style.display = 'none';
+                updateUI();
+                // small haptic-like feedback
+            }, 2000);
+        }
+        
+        // SHOOTING LOGIC with raycasting
+        function handleShoot(event) {
+            if(!gameActive) return;
+            if(isReloading) return;
+            if(ammo <= 0) {
+                // auto reload if empty
+                reloadGun();
+                return;
+            }
+            
+            // get precise coordinates
+            let clientX, clientY;
+            if(event.touches) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+                event.preventDefault();  // avoid zoom
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+            
+            const mouse = new THREE.Vector2();
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(enemies);
+            
+            if(intersects.length > 0) {
+                const hitEnemy = intersects[0].object;
+                eliminateEnemy(hitEnemy);
+                ammo--;
+                updateUI();
+                
+                // if ammo reaches zero, start reload
+                if(ammo === 0) {
+                    reloadGun();
+                }
+            } else {
+                // miss effect: subtle crosshair pulse but no penalty
+                const crosshairSvg = document.querySelector('.crosshair svg');
+                if(crosshairSvg) {
+                    crosshairSvg.style.transform = 'scale(0.9)';
+                    setTimeout(() => { if(crosshairSvg) crosshairSvg.style.transform = ''; }, 80);
+                }
+            }
+        }
+        
+        // ------------------- ANIMATION & GLITCH BEHAVIOR -------------------
+        function updateEnemyGlitches(currentTime) {
+            for(let i = 0; i < enemies.length; i++) {
+                const enemy = enemies[i];
+                if(!enemy) continue;
+                const data = enemy.userData;
+                const now = currentTime;
+                
+                // --- Jitter movement (makes them unnerving)
+                enemy.position.x += (Math.random() - 0.5) * 0.004;
+                enemy.position.y += (Math.random() - 0.5) * 0.004;
+                // keep within boundaries (optional but not critical)
+                enemy.position.x = Math.min(Math.max(enemy.position.x, -5.2), 5.2);
+                enemy.position.y = Math.min(Math.max(enemy.position.y, -4), 4);
+                
+                // --- rotation with chaotic modulation
+                const timeSec = now * 0.002;
+                const rotMod = Math.sin(timeSec + data.pulsePhase) * 0.015;
+                enemy.rotation.x += data.rotationSpeed * 0.7 + rotMod * 0.02;
+                enemy.rotation.y += data.rotationSpeed + Math.sin(timeSec * 1.3) * 0.005;
+                enemy.rotation.z += data.rotationSpeed * 0.5;
+                
+                // --- GLITCH EFFECT (scale pop / material flicker)
+                if(now - data.lastGlitchTime > data.glitchInterval) {
+                    // GLITCH ACTIVATED: random scale distortion and emissive intensity burst
+                    const glitchScale = 1.25 + Math.random() * 0.6;
+                    enemy.scale.setScalar(glitchScale);
+                    
+                    // intense emissive flash
+                    if(enemy.material) {
+                        const originalEmissive = enemy.material.emissiveIntensity || 0.55;
+                        enemy.material.emissiveIntensity = 1.2;
+                        enemy.material.color.setHex(0xff4444);
+                        setTimeout(() => {
+                            if(enemy.material) {
+                                enemy.material.emissiveIntensity = originalEmissive;
+                                enemy.material.color.setHex(0xcc1a1a);
+                            }
+                        }, 120);
+                    }
+                    
+                    // also small position warp
+                    enemy.position.x += (Math.random() - 0.5) * 0.08;
+                    enemy.position.y += (Math.random() - 0.5) * 0.08;
+                    
+                    setTimeout(() => {
+                        if(enemy && enemy.scale) {
+                            enemy.scale.setScalar(data.originalScale);
+                        }
+                    }, 150);
+                    
+                    data.lastGlitchTime = now;
+                    // randomize next glitch interval
+                    data.glitchInterval = 1400 + Math.random() * 2200;
+                }
+                
+                // subtle pulsing emission (minor)
+                if(enemy.material) {
+                    const intensity = 0.5 + Math.sin(Date.now() * 0.006 + data.pulsePhase) * 0.25;
+                    enemy.material.emissiveIntensity = Math.min(0.9, Math.max(0.3, intensity));
+                }
+            }
+        }
+        
+        // ------------------- THREE.JS SETUP -------------------
+        function initThree() {
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            // camera: perspective, matches AR overlay
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.2, 20);
+            camera.position.set(0, 0, 5);
+            camera.lookAt(0, 0, 0);
+            
             renderer = new THREE.WebGLRenderer({ 
                 canvas: document.getElementById('game-canvas'),
                 alpha: true,
                 antialias: true
             });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setClearColor(0x000000, 0);
+            renderer.setClearColor(0x000000, 0); // transparent background for camera feed
             
             raycaster = new THREE.Raycaster();
-            camera.position.z = 5;
             
-            // Add lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
+            // lighting for 3D objects to pop against camera
+            const ambient = new THREE.AmbientLight(0x332222);
+            scene.add(ambient);
+            const mainLight = new THREE.DirectionalLight(0xffaa88, 1.2);
+            mainLight.position.set(2, 3, 4);
+            scene.add(mainLight);
+            const fillLight = new THREE.PointLight(0x992222, 0.5);
+            fillLight.position.set(1, 2, 3);
+            scene.add(fillLight);
+            const backLight = new THREE.PointLight(0xff3333, 0.4);
+            backLight.position.set(-1, 1, -2);
+            scene.add(backLight);
             
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(1, 1, 1);
-            scene.add(directionalLight);
-            
-            // Initialize GLTFLoader
-            gltfLoader = new THREE.GLTFLoader();
-            loadGLBModel();
+            // optional: tiny red fog for depth? not necessary but adds style
+            scene.fog = new THREE.FogExp2(0x000000, 0.018);
         }
         
-        // Load GLB model
-        function loadGLBModel() {
-            gltfLoader.load(
-                '/models/fragmentado.glb',
-                function(gltf) {
-                    gltfModel = gltf.scene;
-                    console.log('GLB model loaded successfully');
-                },
-                function(progress) {
-                    console.log('Loading progress:', progress);
-                },
-                function(error) {
-                    console.error('Failed to load GLB model:', error);
-                    useGLB = false; // Fallback to procedural
-                }
-            );
-        }
-        
-        // Create enemy (mixed types)
-        function createFaceEntity() {
-  const group = new THREE.Group();
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.3,6,4), new THREE.MeshStandardMaterial({color:0xcc0000,emissive:0x440000,roughness:0.8,metalness:0.2}));
-  head.scale.z = 0.75;
-  group.add(head);
-  const eyeMat = new THREE.MeshBasicMaterial({color:0x000000});
-  const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.08,4,4), eyeMat);
-  leftEye.position.set(-0.1,0.05,0.22);
-  group.add(leftEye);
-  const rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.08,4,4), eyeMat);
-  rightEye.position.set(0.1,0.05,0.22);
-  group.add(rightEye);
-  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.08,0.02,4,6,Math.PI), new THREE.MeshBasicMaterial({color:0x000000}));
-  mouth.position.set(0,-0.1,0.22);
-  mouth.rotation.z = Math.PI;
-  group.add(mouth);
-  return group;
-}
-
-function createEnemy() {
-  const enemy = createFaceEntity();
-            const isGLBType = useGLB && gltfModel && Math.random() < 0.3; // 30% GLB
-            let enemy;
-            
-            if (isGLBType) {
-                // Type A: GLB model
-                enemy = gltfModel.clone();
-                enemy.scale.set(0.3, 0.3, 0.3);
-                
-                // Apply red emissive overlay to all materials
-                enemy.traverse((child) => {
-                    if (child.isMesh) {
-                        const material = child.material.clone();
-                        material.emissive = new THREE.Color(0x660000);
-                        material.emissiveIntensity = 0.3;
-                        child.material = material;
-                    }
-                });
-            } else {
-                // Type B: Procedural TorusKnot
-                const geometry = new THREE.TorusKnotGeometry(0.4, 0.15, 100, 16);
-                const material = new THREE.MeshBasicMaterial({ 
-                    color: 0xcc0000,
-                    wireframe: true
-                });
-                enemy = new THREE.Mesh(geometry, material);
-            }
-            
-            // Random position
-            enemy.position.x = (Math.random() - 0.5) * 8;
-            enemy.position.y = (Math.random() - 0.5) * 6;
-            enemy.position.z = (Math.random() - 0.5) * 4;
-            
-            // Enemy behavior properties
-            enemy.userData = {
-                type: isGLBType ? 'GLB' : 'PROCEDURAL',
-                rotationSpeed: 0.003,
-                lastGlitchTime: Date.now(),
-                isHit: false,
-                originalScale: enemy.scale.x
-            };
-            
-            scene.add(enemy);
-            enemies.push(enemy);
-        }
-        
-        // Initialize enemies
-        function initEnemies() {
-            for (let i = 0; i < 5; i++) {
-                createEnemy();
-            }
-        }
-        
-        // Handle shooting
-        function shoot(event) {
-            if (ammo <= 0 || isReloading) return;
-            
-            ammo--;
-            updateAmmo();
-            
-            // Get mouse/touch position
-            const mouse = new THREE.Vector2();
-            if (event.touches) {
-                mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
-            } else {
-                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            }
-            
-            // Raycast from center of screen
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(enemies);
-            
-            if (intersects.length > 0) {
-                const hit = intersects[0].object;
-                eliminateEnemy(hit);
-            }
-            
-            if (ammo === 0) {
-                reload();
-            }
-        }
-        
-        // Eliminate enemy
-        function eliminateEnemy(enemy) {
-            enemy.userData.isHit = true;
-            
-            // Flash invisible for 100ms
-            enemy.visible = false;
-            
-            setTimeout(() => {
-                // Remove from scene and array
-                scene.remove(enemy);
-                const index = enemies.indexOf(enemy);
-                if (index > -1) {
-                    enemies.splice(index, 1);
-                }
-                
-                // Update score
-                score += 100;
-                updateScore();
-                
-                // Show hit flash
-                showHitFlash();
-                
-                // Spawn new enemy
-                setTimeout(() => createEnemy(), 500);
-                
-                // Log to API
-                logKill();
-            }, 100);
-        }
-        
-        // Show hit flash
-        function showHitFlash() {
-            const flash = document.createElement('div');
-            flash.className = 'hit-flash';
-            flash.textContent = 'ECO DISUELTO';
-            document.body.appendChild(flash);
-            
-            setTimeout(() => {
-                document.body.removeChild(flash);
-            }, 1000);
-        }
-        
-        // Reload ammo
-        function reload() {
-            if (isReloading) return;
-            
-            isReloading = true;
-            const reloadIndicator = document.getElementById('reload-indicator');
-            reloadIndicator.style.display = 'block';
-            
-            setTimeout(() => {
-                ammo = maxAmmo;
-                updateAmmo();
-                isReloading = false;
-                reloadIndicator.style.display = 'none';
-            }, 2000);
-        }
-        
-        // Update HUD
-        function updateScore() {
-            document.getElementById('score').textContent = `SCORE: ${score}`;
-        }
-        
-        function updateAmmo() {
-            document.getElementById('ammo').textContent = `AMMO: ${ammo}/${maxAmmo}`;
-        }
-        
-        // Log kill to API
-        async function logKill() {
-            const timestamp = new Date().toISOString();
-            const killData = {
-                score: score,
-                enemiesEliminated: Math.floor(score / 100),
-                timestamp: timestamp
-            };
-            
-            try {
-                await fetch('/api/memory', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        title: `KILL_${timestamp}`,
-                        content: JSON.stringify(killData)
-                    })
-                });
-            } catch (error) {
-                console.log('Failed to log kill:', error);
-            }
-        }
-        
-        // Animation loop
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            const currentTime = Date.now();
-            
-            // Update enemies
-            enemies.forEach(enemy => {
-                if (enemy.userData.isHit) return; // Skip if being eliminated
-                
-                // Jitter
-                enemy.position.x += (Math.random() - 0.5) * 0.003;
-                
-                // Scale glitch every 3 seconds
-                if (currentTime - enemy.userData.lastGlitchTime > 3000) {
-                    const glitchScale = Math.random() < 0.5 ? 0.8 : 1.2;
-                    enemy.scale.setScalar(glitchScale);
-                    setTimeout(() => {
-                        enemy.scale.setScalar(enemy.userData.originalScale);
-                    }, 16); // 1 frame at 60fps
-                    enemy.userData.lastGlitchTime = currentTime;
-                }
-                
-                // Slow imperfect rotation
-                const time = currentTime * 0.001;
-                enemy.rotation.y += enemy.userData.rotationSpeed + Math.sin(time) * 0.001;
-            });
-            
-            renderer.render(scene, camera);
-        }
-        
-        // Handle resize
-        function handleResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        
-        // Start camera on button click
+        // ------------------- CAMERA INIT -------------------
         async function startCamera() {
-    console.log("startCamera called");
-    alert("INICIANDO...");
-            const startOverlay = document.getElementById('start-overlay');
-            const startButton = document.getElementById('start-button');
-            
-            // Show loading state
-            startButton.textContent = 'INITIALIZING...';
-            startButton.disabled = true;
-            
             try {
-                await initCamera();
-                // Hide overlay after camera starts
-                startOverlay.style.display = 'none';
-                // Initialize game after camera is ready
-                initGame();
-            } catch (error) {
-                console.error('Failed to start camera:', error);
-                startButton.textContent = 'RETRY';
-                startButton.disabled = false;
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { exact: "environment" } },
+                    audio: false
+                });
+                videoFeed.srcObject = stream;
+                cameraStreamActive = true;
+                return true;
+            } catch (err) {
+                console.warn("Back camera failed, trying default:", err);
+                try {
+                    const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    videoFeed.srcObject = fallbackStream;
+                    cameraStreamActive = true;
+                    return true;
+                } catch (err2) {
+                    console.error("Camera access denied:", err2);
+                    // fallback: black background but we still allow game
+                    videoFeed.style.display = "none";
+                    cameraStreamActive = false;
+                    return false;
+                }
             }
         }
         
-        // Separate game initialization from camera
-        function initGame() {
-            initThreeJS();
-            initEnemies();
+        // ------------------- FULL GAME START -------------------
+        async function initializeGame() {
+            startBtn.textContent = "⟡ LINKING ⟡";
+            startBtn.disabled = true;
+            
+            // request camera
+            await startCamera();
+            
+            // init Three & game world
+            initThree();
+            initEnemies(6);
+            
+            // start animation loop
+            gameActive = true;
+            function animate() {
+                if(!gameActive) return;
+                requestAnimationFrame(animate);
+                const now = Date.now();
+                updateEnemyGlitches(now);
+                renderer.render(scene, camera);
+            }
             animate();
             
-            // Event listeners
-            window.addEventListener('resize', handleResize);
-            document.addEventListener('click', shoot);
-            document.addEventListener('touchstart', shoot);
+            // attach event listeners
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('click', (e) => {
+                if(!gameActive) return;
+                handleShoot(e);
+            });
+            document.addEventListener('touchstart', (e) => {
+                if(!gameActive) return;
+                e.preventDefault();
+                handleShoot(e);
+            }, { passive: false });
             
-            // Keyboard controls
-            document.addEventListener('keydown', (event) => {
-                if (event.key === 'r' || event.key === 'R') {
-                    reload();
+            // keyboard R reload
+            window.addEventListener('keydown', (e) => {
+                if(!gameActive) return;
+                if(e.key === 'r' || e.key === 'R') {
+                    e.preventDefault();
+                    reloadGun();
                 }
             });
+            
+            // hide start overlay after small delay
+            startOverlay.style.opacity = '0';
+            setTimeout(() => {
+                startOverlay.style.display = 'none';
+            }, 500);
+            
+            updateUI();
+            startBtn.disabled = false;
         }
         
-        // Handle click to start
-        document.getElementById('start-button').addEventListener('click', startCamera);
-    </script>
+        function onWindowResize() {
+            if(camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+        
+        // handle start button
+        startBtn.addEventListener('click', () => {
+            initializeGame().catch(err => {
+                console.error("Init error", err);
+                startBtn.textContent = "⚠️ RETRY LINK";
+                startBtn.disabled = false;
+                alert("Camera unavailable. Game will start with synthetic background.");
+                initializeGame(); // second attempt with fallback
+            });
+        });
+        
+        // preload nothing, but set body ready
+        console.log("NEO·PROXY COMBAT // READY");
+    })();
+</script>
 </body>
 </html>
