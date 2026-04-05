@@ -192,19 +192,19 @@
             
             // Enemigos en posiciones fijas en 360 grados alrededor del jugador
             const positions = [
-                { x: 3.5, y: 0.5, z: -3 },
-                { x: -3, y: 0.2, z: -3.2 },
-                { x: 2.5, y: -0.3, z: -4 },
-                { x: -3.2, y: 0.8, z: -2.5 },
-                { x: 0, y: 1.2, z: -4.5 },
-                { x: 4, y: -0.2, z: -1.5 },
-                { x: -3.5, y: 0.3, z: -2.8 },
-                { x: 2, y: 1, z: -3.8 },
-                { x: -1.5, y: -0.5, z: -5 },
-                { x: 1, y: 1.5, z: -4.2 }
+                { x: 0, y: 0, z: -2 },
+                { x: 2, y: 0, z: -2 },
+                { x: -2, y: 0, z: -2 },
+                { x: 0, y: 0, z: 2 },
+                { x: 2, y: 0, z: 2 },
+                { x: -2, y: 0, z: 2 },
+                { x: 2, y: 0, z: 0 },
+                { x: -2, y: 0, z: 0 },
+                { x: 0, y: 2, z: -2 },
+                { x: 0, y: -1, z: -2 }
             ];
             
-            const numEnemies = 6;
+            const numEnemies = 10;
             for (let i = 0; i < numEnemies; i++) {
                 const pos = positions[i % positions.length];
                 const enemy = createEnemy(pos.x, pos.y + (Math.random() - 0.5) * 1.2, pos.z);
