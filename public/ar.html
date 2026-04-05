@@ -119,8 +119,8 @@
             let pitch = (beta - calibrationY);
             
             // Limitar ángulos para no marear
-            yaw = Math.min(60, Math.max(-60, yaw));
-            pitch = Math.min(50, Math.max(-50, pitch));
+            yaw = Math.min(180, Math.max(-180, yaw));
+            pitch = Math.min(90, Math.max(-90, pitch));
             
             targetRotationY = yaw;   // izquierda-derecha
             targetRotationX = pitch;  // arriba-abajo
@@ -440,14 +440,14 @@
             }
             
             // Suavizado del giroscopio
-            const SMOOTHING = 0.1;
+            const SMOOTHING = 0.3;
             currentRotationY += (targetRotationY - currentRotationY) * SMOOTHING;
             currentRotationX += (targetRotationX - currentRotationX) * SMOOTHING;
             
             // Aplicar rotación a la cámara - ¡ESTA ES LA CLAVE!
             camera.rotation.order = 'YXZ';
-            camera.rotation.y = currentRotationY * Math.PI / 180;
-            camera.rotation.x = currentRotationX * Math.PI / 180;
+            camera.rotation.y = currentRotationY * Math.PI / 90;
+            camera.rotation.x = currentRotationX * Math.PI / 90;
             camera.rotation.z = 0;
             
             animateEnemies();
