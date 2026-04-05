@@ -3,291 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NEO·PROXY COMBAT // TRUE AR MODE</title>
+    <title>NEO·PROXY // GYRO AR</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            font-family: 'Courier New', 'SF Mono', monospace;
-            background: #000;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-            position: fixed;
-        }
-
-        #camera-feed {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: 1;
-            filter: brightness(1.05) contrast(1.1);
-        }
-
-        #game-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 2;
-            display: block;
-        }
-
-        .hud {
-            position: absolute;
-            z-index: 3;
-            pointer-events: none;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            backdrop-filter: blur(6px);
-            background: rgba(0, 0, 0, 0.65);
-            border-left: 3px solid #ff2a2a;
-            padding: 8px 16px;
-            color: #ff3a3a;
-            text-shadow: 0 0 6px #ff0000;
-            font-size: 14px;
-        }
-
-        .top-bar {
-            top: 18px;
-            left: 18px;
-            right: 18px;
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            border-left: none;
-            border-right: 3px solid #ff2a2a;
-            border-bottom: 1px solid #ff2a2a;
-            background: rgba(0, 0, 0, 0.8);
-        }
-
-        .score-label {
-            font-size: 1.3rem;
-            letter-spacing: 2px;
-        }
-
-        .bottom-left {
-            bottom: 20px;
-            left: 20px;
-            font-size: 10px;
-            border-left: 3px solid #ff2a2a;
-        }
-
-        .bottom-right {
-            bottom: 20px;
-            right: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            background: rgba(0, 0, 0, 0.8);
-        }
-
-        .crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 10;
-            pointer-events: none;
-            opacity: 0.9;
-        }
-        .crosshair svg {
-            filter: drop-shadow(0 0 3px #ff0000);
-        }
-
-        .reload-indicator {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-family: monospace;
-            font-size: 1.8rem;
-            font-weight: bold;
-            background: black;
-            padding: 12px 24px;
-            border: 2px solid #ff0000;
-            color: #ff5555;
-            z-index: 20;
-            pointer-events: none;
-            white-space: nowrap;
-            text-shadow: 0 0 12px red;
-            letter-spacing: 4px;
-            backdrop-filter: blur(8px);
-            display: none;
-            animation: pulse 0.8s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 0.7; text-shadow: 0 0 4px red; }
-            100% { opacity: 1; text-shadow: 0 0 16px #ff4444; }
-        }
-
-        .hit-flash {
-            position: absolute;
-            top: 40%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #ff0000;
-            background: rgba(0,0,0,0.7);
-            padding: 10px 24px;
-            border: 1px solid #ff0000;
-            white-space: nowrap;
-            font-family: monospace;
-            z-index: 15;
-            pointer-events: none;
-            animation: fadeOutUp 0.9s forwards;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-        }
-
-        @keyframes fadeOutUp {
-            0% { opacity: 1; transform: translate(-50%, -50%); }
-            100% { opacity: 0; transform: translate(-50%, -80%); }
-        }
-
-        #start-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at center, #0a0101 0%, #000000 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            z-index: 100;
-            backdrop-filter: blur(2px);
-            font-family: monospace;
-            transition: 0.4s ease;
-        }
-
-        .glitch-title {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #ff2a2a;
-            text-shadow: 3px 3px 0 #7a0000, -2px -2px 0 #ff8888;
-            margin-bottom: 30px;
-            letter-spacing: 4px;
-            animation: textGlitch 1.2s infinite;
-            text-align: center;
-        }
-
-        @keyframes textGlitch {
-            0% { text-shadow: 2px 2px 0 #aa0000; }
-            25% { text-shadow: -2px -1px 0 #ff4444, 1px 1px 0 #660000; }
-            50% { text-shadow: 3px -1px 0 #aa2a2a; }
-            75% { text-shadow: -1px 2px 0 #ff1a1a; }
-            100% { text-shadow: 2px 2px 0 #aa0000; }
-        }
-
-        #start-button {
-            background: #000000cc;
-            color: #ff2a2a;
-            border: 2px solid #ff2a2a;
-            padding: 14px 36px;
-            font-family: monospace;
-            font-size: 1.2rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            transition: 0.2s;
-            backdrop-filter: blur(4px);
-            box-shadow: 0 0 12px rgba(255,0,0,0.4);
-        }
-
-        #start-button:hover {
-            background: #ff2a2a;
-            color: black;
-            box-shadow: 0 0 28px #ff2a2a;
-            transform: scale(0.98);
-        }
-
-        .instruction-tag {
-            margin-top: 25px;
-            color: #aa2222;
-            font-size: 0.7rem;
-            letter-spacing: 1px;
-            background: rgba(0,0,0,0.6);
-            padding: 8px 16px;
-            text-align: center;
-            max-width: 80%;
-        }
-
-        #game-over {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            z-index: 200;
-            font-family: monospace;
-        }
-
-        #game-over h1 {
-            color: #ff0000;
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-            text-shadow: 0 0 20px red;
-        }
-
-        #final-score {
-            color: #ff6666;
-            font-size: 1.8rem;
-            margin-bottom: 25px;
-        }
-
-        #restart-btn, #calibrate-btn {
-            background: #000;
-            color: #ff0000;
-            border: 2px solid #ff0000;
-            padding: 10px 25px;
-            font-size: 1rem;
-            cursor: pointer;
-            font-family: monospace;
-            margin: 8px;
-        }
-
-        .gyro-status {
-            position: absolute;
-            top: 80px;
-            right: 12px;
-            background: rgba(0,0,0,0.7);
-            padding: 3px 8px;
-            font-size: 8px;
-            color: #ff8888;
-            z-index: 3;
-            border-radius: 4px;
-            pointer-events: none;
-            font-family: monospace;
-        }
-
-        @media (max-width: 600px) {
-            .glitch-title { font-size: 1.5rem; letter-spacing: 2px; }
-            #start-button { padding: 10px 24px; font-size: 0.9rem; }
-            .bottom-right { font-size: 11px; }
-            .hit-flash { font-size: 0.8rem; padding: 5px 12px; }
-            .reload-indicator { font-size: 1rem; padding: 6px 16px; }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Courier New', monospace; background: #000; overflow: hidden; width: 100vw; height: 100vh; position: fixed; }
+        #camera-feed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        #game-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
+        .hud { position: absolute; z-index: 3; pointer-events: none; font-family: 'Courier New', monospace; font-weight: bold; backdrop-filter: blur(8px); background: rgba(0,0,0,0.7); border-left: 3px solid #ff2a2a; padding: 8px 16px; color: #ff3a3a; text-shadow: 0 0 6px #ff0000; font-size: 14px; }
+        .top-bar { top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; border-left: none; border-right: 3px solid #ff2a2a; border-bottom: 1px solid #ff2a2a; }
+        .bottom-left { bottom: 20px; left: 20px; font-size: 10px; }
+        .bottom-right { bottom: 20px; right: 20px; font-size: 14px; }
+        .crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; pointer-events: none; }
+        .reload-indicator { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: black; border: 2px solid #ff0000; color: #ff5555; padding: 12px 24px; z-index: 20; display: none; font-family: monospace; font-size: 1.5rem; white-space: nowrap; }
+        .hit-flash { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); color: #ff0000; background: rgba(0,0,0,0.8); padding: 10px 20px; border: 1px solid #ff0000; z-index: 15; animation: fadeOut 0.8s forwards; font-family: monospace; font-size: 1.2rem; white-space: nowrap; }
+        @keyframes fadeOut { 0% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -70%); } }
+        #start-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; flex-direction: column; z-index: 100; }
+        #start-button { background: #000; color: #ff0000; border: 2px solid #ff0000; padding: 15px 35px; font-family: monospace; font-size: 1.2rem; cursor: pointer; margin-top: 20px; }
+        #game-over { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; justify-content: center; align-items: center; flex-direction: column; z-index: 200; }
+        #restart-btn { background: #000; color: #ff0000; border: 2px solid #ff0000; padding: 10px 25px; margin-top: 20px; cursor: pointer; font-family: monospace; }
+        .gyro-status { position: absolute; top: 80px; right: 12px; background: rgba(0,0,0,0.7); padding: 4px 8px; font-size: 9px; color: #ff8888; z-index: 3; border-radius: 4px; pointer-events: none; }
+        .gyro-debug { position: absolute; bottom: 80px; left: 10px; background: rgba(0,0,0,0.6); padding: 4px 8px; font-size: 9px; color: #88ff88; z-index: 3; font-family: monospace; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -296,434 +31,385 @@
 <canvas id="game-canvas"></canvas>
 
 <div class="hud top-bar">
-    <div>⧉ NEO·PROXY // TRUE AR</div>
-    <div id="score" class="score-label">SCORE: 0</div>
+    <div>NEO·PROXY GYRO AR</div>
+    <div id="score">SCORE: 0</div>
 </div>
 
 <div class="crosshair">
-    <svg width="44" height="44" viewBox="0 0 44 44">
-        <line x1="22" y1="6" x2="22" y2="18" stroke="#ff3333" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="22" y1="26" x2="22" y2="38" stroke="#ff3333" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="6" y1="22" x2="18" y2="22" stroke="#ff3333" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="26" y1="22" x2="38" y2="22" stroke="#ff3333" stroke-width="2.5" stroke-linecap="round"/>
-        <circle cx="22" cy="22" r="6" fill="none" stroke="#ff4444" stroke-width="1.5"/>
+    <svg width="40" height="40" viewBox="0 0 40 40">
+        <line x1="20" y1="5" x2="20" y2="15" stroke="#ff0000" stroke-width="2"/>
+        <line x1="20" y1="25" x2="20" y2="35" stroke="#ff0000" stroke-width="2"/>
+        <line x1="5" y1="20" x2="15" y2="20" stroke="#ff0000" stroke-width="2"/>
+        <line x1="25" y1="20" x2="35" y2="20" stroke="#ff0000" stroke-width="2"/>
+        <circle cx="20" cy="20" r="5" fill="none" stroke="#ff0000" stroke-width="1"/>
     </svg>
 </div>
 
 <div class="hud bottom-left">
-    <div>🎯 TRUE AR // MOVE PHONE TO AIM</div>
-    <div style="font-size: 8px;">⟳ R | TAP TO FIRE | C: CALIBRATE</div>
+    <div>🎮 MUEVE EL CELULAR PARA APUNTAR</div>
+    <div>🔫 TAP PARA DISPARAR | DOBLE TAP CALIBRAR</div>
 </div>
 
 <div class="hud bottom-right">
-    <div id="ammo">🔫 AMMO: 12/12</div>
-    <div id="enemy-count" style="font-size: 9px; margin-top: 3px;">👾 ENEMIES: 0</div>
+    <div id="ammo">AMMO: 12/12</div>
+    <div id="enemies-count">👾 0</div>
 </div>
 
-<div class="gyro-status" id="gyro-status">⚡ GYRO: INITIALIZING...</div>
+<div class="gyro-status" id="gyro-status">⚡ GYRO: ESPERANDO...</div>
+<div class="gyro-debug" id="gyro-debug">📐 yaw:0° pitch:0°</div>
 
-<div id="reload-indicator" class="reload-indicator">⟳ RELOADING... ⟳</div>
+<div id="reload-indicator" class="reload-indicator">⟳ RECARGANDO... ⟳</div>
 
 <div id="start-overlay">
-    <div class="glitch-title">// NEO·PROXY COMBAT //<br>TRUE AUGMENTED REALITY</div>
-    <button id="start-button">⟡ INITIALIZE AR ⟡</button>
-    <div class="instruction-tag">[ GIROSCOPIO ACTIVADO ] — LOS ENEMIGOS ESTÁN FIJOS EN EL ESPACIO<br>GIRA EL CELULAR PARA BUSCARLOS Y DISPARAR</div>
+    <h1 style="color:#ff0000; margin-bottom:20px;">NEO·PROXY AR</h1>
+    <p style="color:#ff6666; margin-bottom:10px;">REALIDAD AUMENTADA CON GIROSCOPIO</p>
+    <button id="start-button">🎯 INICIAR AR</button>
+    <p style="color:#aa5555; margin-top:20px; font-size:12px;">Permite acceso a la cámara y movimiento</p>
 </div>
 
 <div id="game-over">
-    <h1>💀 GAME OVER 💀</h1>
-    <div id="final-score">SCORE: 0</div>
-    <button id="restart-btn">⟳ RESTART ⟳</button>
-    <button id="calibrate-btn">🎯 CALIBRATE GYRO</button>
+    <h1 style="color:#ff0000;">💀 GAME OVER 💀</h1>
+    <div id="final-score" style="color:#ff6666; font-size:24px; margin:20px;">0</div>
+    <button id="restart-btn">⟳ REINICIAR ⟳</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
     (function(){
-        // ------------------- GLOBAL STATE -------------------
-        let scene, camera, renderer, raycaster;
+        // ========== DOM ELEMENTS ==========
+        const videoFeed = document.getElementById('camera-feed');
+        const startOverlay = document.getElementById('start-overlay');
+        const gameOverlay = document.getElementById('game-over');
+        const startBtn = document.getElementById('start-button');
+        const restartBtn = document.getElementById('restart-btn');
+        const scoreEl = document.getElementById('score');
+        const ammoEl = document.getElementById('ammo');
+        const enemiesCountEl = document.getElementById('enemies-count');
+        const reloadIndicator = document.getElementById('reload-indicator');
+        const gyroStatusEl = document.getElementById('gyro-status');
+        const gyroDebugEl = document.getElementById('gyro-debug');
+        
+        // ========== GAME STATE ==========
+        let scene, camera, renderer;
         let enemies = [];
         let score = 0;
         let ammo = 12;
-        const MAX_AMMO = 12;
         let isReloading = false;
         let gameActive = false;
         
-        // Enemy spawn management
-        let targetEnemyCount = 5;
-        let lastSpawnTime = 0;
-        const SPAWN_DELAY = 3000;
-        
-        // Gyroscope variables (para mover la CÁMARA, los objetos quedan fijos)
-        let targetRotationX = 0;
-        let targetRotationY = 0;
+        // ========== GYROSCOPE ==========
         let currentRotationX = 0;
         let currentRotationY = 0;
-        let calibrationOffsetX = 0;
-        let calibrationOffsetY = 0;
-        let initialBeta = null;
-        let initialGamma = null;
+        let targetRotationX = 0;
+        let targetRotationY = 0;
+        let calibrationX = 0;
+        let calibrationY = 0;
+        let gyroEnabled = false;
         
-        const SMOOTHING = 0.12;
-        
-        // DOM elements
-        const scoreEl = document.getElementById('score');
-        const ammoEl = document.getElementById('ammo');
-        const enemyCountEl = document.getElementById('enemy-count');
-        const reloadIndicator = document.getElementById('reload-indicator');
-        const startOverlay = document.getElementById('start-overlay');
-        const gameOverlay = document.getElementById('game-over');
-        const finalScoreEl = document.getElementById('final-score');
-        const startBtn = document.getElementById('start-button');
-        const restartBtn = document.getElementById('restart-btn');
-        const calibrateBtn = document.getElementById('calibrate-btn');
-        const gyroStatus = document.getElementById('gyro-status');
-        const videoFeed = document.getElementById('camera-feed');
-        
-        // ------------------- GYROSCOPE (MUEVE LA CÁMARA) -------------------
         function handleOrientation(event) {
             if (!gameActive) return;
             
-            let beta = event.beta;
-            let gamma = event.gamma;
+            // gamma: left-right (-90 a 90) -> YAW
+            // beta: front-back (-180 a 180) -> PITCH
+            let gamma = event.gamma || 0;
+            let beta = event.beta || 0;
             
-            if (beta === null || gamma === null) return;
+            // Aplicar calibración
+            let yaw = (gamma - calibrationX);
+            let pitch = (beta - calibrationY);
             
-            // calibrate with initial values
-            if (initialBeta === null) {
-                initialBeta = beta;
-                initialGamma = gamma;
-                gyroStatus.textContent = '🎯 GYRO: ACTIVE';
-                setTimeout(() => {
-                    if(gyroStatus) gyroStatus.style.opacity = '0.6';
-                }, 2000);
+            // Limitar ángulos para no marear
+            yaw = Math.min(60, Math.max(-60, yaw));
+            pitch = Math.min(50, Math.max(-50, pitch));
+            
+            targetRotationY = yaw;   // izquierda-derecha
+            targetRotationX = pitch;  // arriba-abajo
+            
+            if (!gyroEnabled && (Math.abs(gamma) > 0.1 || Math.abs(beta) > 0.1)) {
+                gyroEnabled = true;
+                gyroStatusEl.textContent = '✅ GYRO: ACTIVO';
+                gyroStatusEl.style.color = '#88ff88';
             }
             
-            // apply calibration
-            let rawX = (beta || 0) - (initialBeta || 0);
-            let rawY = (gamma || 0) - (initialGamma || 0);
-            
-            rawX -= calibrationOffsetX;
-            rawY -= calibrationOffsetY;
-            
-            // Ángulos cómodos: ±50 grados para mirar alrededor
-            const maxAngle = 55;
-            targetRotationX = Math.min(maxAngle, Math.max(-maxAngle, rawX));
-            targetRotationY = Math.min(maxAngle, Math.max(-maxAngle, rawY));
+            // Debug
+            gyroDebugEl.textContent = `📐 yaw:${yaw.toFixed(1)}° pitch:${pitch.toFixed(1)}°`;
         }
         
         function calibrateGyro() {
-            calibrationOffsetX = 0;
-            calibrationOffsetY = 0;
-            initialBeta = null;
-            initialGamma = null;
+            calibrationX = 0;
+            calibrationY = 0;
             targetRotationX = 0;
             targetRotationY = 0;
             currentRotationX = 0;
             currentRotationY = 0;
-            gyroStatus.textContent = '🎯 GYRO: RECALIBRATING...';
+            gyroStatusEl.textContent = '🎯 GYRO: CALIBRADO';
+            gyroStatusEl.style.color = '#ffff88';
             setTimeout(() => {
-                if(gyroStatus) gyroStatus.textContent = '🎯 GYRO: ACTIVE';
+                if(gyroStatusEl && gameActive) {
+                    gyroStatusEl.textContent = '✅ GYRO: ACTIVO';
+                    gyroStatusEl.style.color = '#88ff88';
+                }
             }, 1500);
+            console.log('Gyro calibrate');
         }
         
-        // ------------------- CREATE ENEMIES (FIJOS EN EL ESPACIO 3D) -------------------
-        function getRandomEnemyGeometry() {
-            const r = Math.random();
-            if (r < 0.4) {
-                return new THREE.TorusKnotGeometry(0.45, 0.13, 140, 12, 3, 4);
-            } else if (r < 0.7) {
-                return new THREE.IcosahedronGeometry(0.42, 0);
-            } else {
-                return new THREE.DodecahedronGeometry(0.4, 0);
-            }
-        }
-        
+        // ========== CREAR ENEMIGOS FIJOS EN EL ESPACIO ==========
         function createEnemy(x, y, z) {
-            let geometry = getRandomEnemyGeometry();
+            const geometries = [
+                new THREE.TorusKnotGeometry(0.45, 0.13, 120, 12, 3, 4),
+                new THREE.IcosahedronGeometry(0.42, 0),
+                new THREE.DodecahedronGeometry(0.4, 0)
+            ];
+            const geometry = geometries[Math.floor(Math.random() * geometries.length)];
             const material = new THREE.MeshStandardMaterial({
-                color: 0xcc1a1a,
-                emissive: 0x441111,
-                emissiveIntensity: 0.55,
+                color: 0xdd2222,
+                emissive: 0x551111,
+                emissiveIntensity: 0.5,
                 metalness: 0.7,
-                roughness: 0.35
+                roughness: 0.3
             });
             
-            const enemyMesh = new THREE.Mesh(geometry, material);
+            const enemy = new THREE.Mesh(geometry, material);
+            enemy.position.set(x, y, z);
             
-            // Posición fija en el mundo 3D
-            enemyMesh.position.x = x;
-            enemyMesh.position.y = y;
-            enemyMesh.position.z = z;
-            
-            enemyMesh.userData = {
-                rotationSpeed: 0.008 + Math.random() * 0.012,
-                lastGlitchTime: Date.now(),
-                glitchInterval: 1800 + Math.random() * 1800,
-                originalScale: 0.9 + Math.random() * 0.5,
+            enemy.userData = {
+                rotSpeedX: 0.008 + Math.random() * 0.01,
+                rotSpeedY: 0.01 + Math.random() * 0.01,
+                scaleOrig: 0.8 + Math.random() * 0.5,
+                glitchTime: Date.now(),
+                glitchInterval: 1500 + Math.random() * 2000,
                 pulsePhase: Math.random() * Math.PI * 2
             };
             
-            const randScale = enemyMesh.userData.originalScale;
-            enemyMesh.scale.set(randScale, randScale, randScale);
-            
-            return enemyMesh;
+            enemy.scale.setScalar(enemy.userData.scaleOrig);
+            return enemy;
         }
         
-        // Genera enemigos en posiciones fijas alrededor del jugador (360 grados)
-        function generateFixedEnemies(count) {
-            const enemiesList = [];
-            const radius = 3.5;  // distancia fija de los enemigos
-            const yRange = 2.5;   // altura variable
-            
-            for(let i = 0; i < count; i++) {
-                // Ángulo aleatorio alrededor del círculo
-                const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
-                const x = Math.cos(angle) * radius * (0.8 + Math.random() * 0.6);
-                const z = Math.sin(angle) * radius * (0.8 + Math.random() * 0.6);
-                const y = (Math.random() - 0.5) * yRange;
-                
-                const enemy = createEnemy(x, y, z);
-                enemiesList.push(enemy);
-            }
-            return enemiesList;
-        }
-        
-        function initEnemies(count = 6) {
+        function spawnEnemies() {
             enemies.forEach(e => scene.remove(e));
             enemies = [];
-            const newEnemies = generateFixedEnemies(count);
-            newEnemies.forEach(e => {
-                scene.add(e);
-                enemies.push(e);
-            });
-            updateEnemyCount();
+            
+            // Enemigos en posiciones fijas en 360 grados alrededor del jugador
+            const positions = [
+                { x: 3.5, y: 0.5, z: 3 },
+                { x: -3, y: 0.2, z: 3.2 },
+                { x: 2.5, y: -0.3, z: 4 },
+                { x: -3.2, y: 0.8, z: 2.5 },
+                { x: 0, y: 1.2, z: 4.5 },
+                { x: 4, y: -0.2, z: 1.5 },
+                { x: -3.5, y: 0.3, z: 2.8 },
+                { x: 2, y: 1, z: 3.8 },
+                { x: -1.5, y: -0.5, z: 5 },
+                { x: 1, y: 1.5, z: 4.2 }
+            ];
+            
+            const numEnemies = 6;
+            for (let i = 0; i < numEnemies; i++) {
+                const pos = positions[i % positions.length];
+                const enemy = createEnemy(pos.x, pos.y + (Math.random() - 0.5) * 1.2, pos.z);
+                scene.add(enemy);
+                enemies.push(enemy);
+            }
+            
+            updateEnemiesCount();
         }
         
-        function spawnNewEnemy() {
-            // Crear enemigo en una posición aleatoria alrededor del jugador
-            const radius = 3.2 + Math.random() * 1.5;
+        function respawnEnemy() {
             const angle = Math.random() * Math.PI * 2;
+            const radius = 3 + Math.random() * 2;
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
-            const y = (Math.random() - 0.5) * 2.8;
+            const y = (Math.random() - 0.5) * 2.5;
             
-            const newEnemy = createEnemy(x, y, z);
-            scene.add(newEnemy);
-            enemies.push(newEnemy);
-            updateEnemyCount();
+            const enemy = createEnemy(x, y, z);
+            scene.add(enemy);
+            enemies.push(enemy);
+            updateEnemiesCount();
         }
         
-        function updateEnemyCount() {
-            enemyCountEl.textContent = `👾 ENEMIES: ${enemies.length}`;
+        function updateEnemiesCount() {
+            enemiesCountEl.textContent = `👾 ${enemies.length}`;
         }
         
-        // ------------------- GAME OVER & RESTART -------------------
-        function endGame() {
+        // ========== GAME MECHANICS ==========
+        function shoot(event) {
+            if (!gameActive || isReloading) return;
+            if (event) event.preventDefault();
+            
+            if (ammo <= 0) {
+                reload();
+                return;
+            }
+            
+            // Raycast desde el centro de la cámara (donde apunta la mira)
+            const raycaster = new THREE.Raycaster();
+            const center = new THREE.Vector2(0, 0);
+            raycaster.setFromCamera(center, camera);
+            
+            const intersects = raycaster.intersectObjects(enemies);
+            
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                scene.remove(hit);
+                const idx = enemies.indexOf(hit);
+                if (idx > -1) enemies.splice(idx, 1);
+                
+                score += 100;
+                updateUI();
+                
+                // Efecto visual de impacto
+                const flash = document.createElement('div');
+                flash.className = 'hit-flash';
+                flash.textContent = '⚡ ELIMINADO +100 ⚡';
+                document.body.appendChild(flash);
+                setTimeout(() => flash.remove(), 700);
+                
+                // Vibrar si soporta
+                if (navigator.vibrate) navigator.vibrate(50);
+                
+                // Respawnear nuevo enemigo
+                setTimeout(() => {
+                    if (gameActive && enemies.length < 10) {
+                        respawnEnemy();
+                    }
+                }, 400);
+            }
+            
+            ammo--;
+            updateUI();
+            
+            if (ammo === 0) reload();
+        }
+        
+        function reload() {
+            if (isReloading) return;
+            isReloading = true;
+            reloadIndicator.style.display = 'flex';
+            if (navigator.vibrate) navigator.vibrate(100);
+            
+            setTimeout(() => {
+                ammo = 12;
+                isReloading = false;
+                reloadIndicator.style.display = 'none';
+                updateUI();
+            }, 1800);
+        }
+        
+        function updateUI() {
+            scoreEl.textContent = `SCORE: ${score}`;
+            ammoEl.textContent = `AMMO: ${ammo}/12`;
+        }
+        
+        function gameOver() {
             gameActive = false;
-            finalScoreEl.textContent = `SCORE: ${score}`;
+            document.getElementById('final-score').textContent = `SCORE: ${score}`;
             gameOverlay.style.display = 'flex';
         }
         
         function restartGame() {
             score = 0;
-            ammo = MAX_AMMO;
+            ammo = 12;
             updateUI();
             
             enemies.forEach(e => scene.remove(e));
             enemies = [];
-            initEnemies(6);
-            
-            // reset gyro
-            initialBeta = null;
-            initialGamma = null;
-            targetRotationX = 0;
-            targetRotationY = 0;
-            currentRotationX = 0;
-            currentRotationY = 0;
-            calibrationOffsetX = 0;
-            calibrationOffsetY = 0;
+            spawnEnemies();
             
             gameActive = true;
             gameOverlay.style.display = 'none';
-            gyroStatus.textContent = '🎯 GYRO: ACTIVE';
+            
+            // Reset gyro
+            calibrateGyro();
         }
         
-        // ------------------- MECÁNICAS -------------------
-        function showHitFlash() {
-            const flashDiv = document.createElement('div');
-            flashDiv.className = 'hit-flash';
-            flashDiv.textContent = '⚡ TARGET NEUTRALIZED ⚡';
-            document.body.appendChild(flashDiv);
-            setTimeout(() => {
-                if(flashDiv && flashDiv.remove) flashDiv.remove();
-            }, 700);
-        }
-        
-        function updateUI() {
-            scoreEl.textContent = `SCORE: ${score}`;
-            ammoEl.textContent = `🔫 AMMO: ${ammo}/${MAX_AMMO}`;
-        }
-        
-        function eliminateEnemy(enemyMesh) {
-            if (!enemyMesh || !enemyMesh.parent) return false;
+        // ========== ANIMACION ENEMIGOS ==========
+        function animateEnemies() {
+            const now = Date.now();
             
-            scene.remove(enemyMesh);
-            const idx = enemies.indexOf(enemyMesh);
-            if(idx !== -1) enemies.splice(idx, 1);
-            
-            score += 100;
-            updateUI();
-            showHitFlash();
-            updateEnemyCount();
-            
-            // Respawnear después de un tiempo
-            setTimeout(() => {
-                if(gameActive && enemies.length < 8) {
-                    spawnNewEnemy();
-                }
-            }, 800);
-            
-            return true;
-        }
-        
-        function reloadGun() {
-            if(isReloading) return;
-            if(ammo === MAX_AMMO) return;
-            
-            isReloading = true;
-            reloadIndicator.style.display = 'flex';
-            
-            setTimeout(() => {
-                ammo = MAX_AMMO;
-                isReloading = false;
-                reloadIndicator.style.display = 'none';
-                updateUI();
-            }, 2000);
-        }
-        
-        // Disparo: raycast desde el centro de la cámara
-        function handleShoot(event) {
-            if(!gameActive) return;
-            if(isReloading) return;
-            if(ammo <= 0) {
-                reloadGun();
-                return;
-            }
-            
-            // Ray desde el centro de la pantalla (dirección de la cámara)
-            const center = new THREE.Vector2(0, 0);
-            raycaster.setFromCamera(center, camera);
-            const intersects = raycaster.intersectObjects(enemies);
-            
-            if(intersects.length > 0) {
-                const hitEnemy = intersects[0].object;
-                eliminateEnemy(hitEnemy);
-                ammo--;
-                updateUI();
+            for (let enemy of enemies) {
+                // Rotación constante
+                enemy.rotation.x += enemy.userData.rotSpeedX;
+                enemy.rotation.y += enemy.userData.rotSpeedY;
+                enemy.rotation.z += enemy.userData.rotSpeedY * 0.5;
                 
-                // feedback visual de disparo
-                const crosshairSvg = document.querySelector('.crosshair svg');
-                if(crosshairSvg) {
-                    crosshairSvg.style.transform = 'scale(0.85)';
-                    setTimeout(() => { if(crosshairSvg) crosshairSvg.style.transform = ''; }, 80);
-                }
-                
-                if(ammo === 0) {
-                    reloadGun();
-                }
-            }
-        }
-        
-        // ------------------- ANIMACIÓN DE ENEMIGOS (SIN MOVERSE DE POSICIÓN) -------------------
-        function updateEnemyAnimations(currentTime) {
-            for(let i = 0; i < enemies.length; i++) {
-                const enemy = enemies[i];
-                if(!enemy) continue;
-                const data = enemy.userData;
-                
-                // Rotación lenta y glitches (pero sin moverse de posición)
-                const timeSec = currentTime * 0.002;
-                const rotMod = Math.sin(timeSec + data.pulsePhase) * 0.015;
-                enemy.rotation.x += data.rotationSpeed * 0.7 + rotMod * 0.02;
-                enemy.rotation.y += data.rotationSpeed + Math.sin(timeSec * 1.3) * 0.005;
-                enemy.rotation.z += data.rotationSpeed * 0.5;
-                
-                // Efecto glitch ocasional
-                if(currentTime - data.lastGlitchTime > data.glitchInterval) {
-                    const glitchScale = 1.3 + Math.random() * 0.5;
+                // Efecto glitch
+                if (now - enemy.userData.glitchTime > enemy.userData.glitchInterval) {
+                    const glitchScale = 1.25 + Math.random() * 0.5;
                     enemy.scale.setScalar(glitchScale);
                     
-                    if(enemy.material) {
-                        const originalEmissive = enemy.material.emissiveIntensity || 0.55;
+                    if (enemy.material) {
                         enemy.material.emissiveIntensity = 1.2;
-                        enemy.material.color.setHex(0xff4444);
                         setTimeout(() => {
-                            if(enemy.material) {
-                                enemy.material.emissiveIntensity = originalEmissive;
-                                enemy.material.color.setHex(0xcc1a1a);
-                            }
+                            if (enemy.material) enemy.material.emissiveIntensity = 0.4;
                         }, 120);
                     }
                     
                     setTimeout(() => {
-                        if(enemy && enemy.scale) {
-                            enemy.scale.setScalar(data.originalScale);
-                        }
+                        if (enemy) enemy.scale.setScalar(enemy.userData.scaleOrig);
                     }, 150);
                     
-                    data.lastGlitchTime = currentTime;
-                    data.glitchInterval = 1400 + Math.random() * 2200;
+                    enemy.userData.glitchTime = now;
+                    enemy.userData.glitchInterval = 1400 + Math.random() * 2500;
                 }
                 
-                // Pulsación de emisión
-                if(enemy.material) {
-                    const intensity = 0.5 + Math.sin(currentTime * 0.006 + data.pulsePhase) * 0.3;
-                    enemy.material.emissiveIntensity = Math.min(1.0, Math.max(0.3, intensity));
+                // Pulsación suave
+                if (enemy.material) {
+                    const intensity = 0.4 + Math.sin(now * 0.005 + enemy.userData.pulsePhase) * 0.25;
+                    enemy.material.emissiveIntensity = intensity;
                 }
             }
         }
         
-        // ------------------- THREE.JS -------------------
+        // ========== THREE.JS ==========
         function initThree() {
             scene = new THREE.Scene();
+            
+            // Cámara en el origen (el jugador)
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 0, 0);  // Cámara en el origen, los enemigos alrededor
+            camera.position.set(0, 0, 0);
             
             renderer = new THREE.WebGLRenderer({ 
-                canvas: document.getElementById('game-canvas'),
+                canvas: document.getElementById('game-canvas'), 
                 alpha: true,
                 antialias: true
             });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setClearColor(0x000000, 0);
             
-            raycaster = new THREE.Raycaster();
+            // Luces
+            const ambientLight = new THREE.AmbientLight(0x442222);
+            scene.add(ambientLight);
             
-            // Iluminación
-            const ambient = new THREE.AmbientLight(0x332222);
-            scene.add(ambient);
-            const mainLight = new THREE.DirectionalLight(0xffaa88, 1.2);
-            mainLight.position.set(2, 3, 4);
-            scene.add(mainLight);
+            const dirLight = new THREE.DirectionalLight(0xffaa88, 1.2);
+            dirLight.position.set(2, 3, 4);
+            scene.add(dirLight);
+            
             const fillLight = new THREE.PointLight(0x992222, 0.6);
             fillLight.position.set(1, 2, 3);
             scene.add(fillLight);
-            const backLight = new THREE.PointLight(0xff3333, 0.5);
-            backLight.position.set(-1, 1, -3);
+            
+            const backLight = new THREE.PointLight(0xff4444, 0.4);
+            backLight.position.set(-2, 1, -3);
             scene.add(backLight);
             
-            // Grid opcional para referencia espacial (sutil)
-            const gridHelper = new THREE.GridHelper(12, 20, 0x441111, 0x331111);
-            gridHelper.position.y = -1.5;
+            // Grid de referencia en el suelo
+            const gridHelper = new THREE.GridHelper(12, 20, 0x882222, 0x442222);
+            gridHelper.position.y = -1.3;
             gridHelper.material.transparent = true;
             gridHelper.material.opacity = 0.25;
             scene.add(gridHelper);
+            
+            // Pequeña esfera de referencia en el centro (opcional)
+            const centerSphere = new THREE.Mesh(
+                new THREE.SphereGeometry(0.1, 8, 8),
+                new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5 })
+            );
+            scene.add(centerSphere);
         }
         
-        // ------------------- CAMARA -------------------
-        async function startCamera() {
+        // ========== CAMARA FEED ==========
+        async function initCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: { exact: "environment" } },
@@ -731,115 +417,132 @@
                 });
                 videoFeed.srcObject = stream;
                 return true;
-            } catch (err) {
+            } catch(e) {
+                console.log('Camera error, trying default:', e);
                 try {
-                    const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    videoFeed.srcObject = fallbackStream;
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    videoFeed.srcObject = stream;
                     return true;
-                } catch (err2) {
-                    videoFeed.style.display = "none";
+                } catch(e2) {
+                    console.log('No camera:', e2);
+                    videoFeed.style.display = 'none';
                     return false;
                 }
             }
         }
         
-        // ------------------- ANIMATION LOOP -------------------
+        // ========== ANIMATION LOOP ==========
         function animate() {
             requestAnimationFrame(animate);
             
-            if(!gameActive) {
-                if(camera && renderer) renderer.render(scene, camera);
+            if (!gameActive) {
+                if (renderer && camera) renderer.render(scene, camera);
                 return;
             }
             
             // Suavizado del giroscopio
-            currentRotationX += (targetRotationX - currentRotationX) * SMOOTHING;
+            const SMOOTHING = 0.1;
             currentRotationY += (targetRotationY - currentRotationY) * SMOOTHING;
+            currentRotationX += (targetRotationX - currentRotationX) * SMOOTHING;
             
-            // Aplicar rotación a la cámara (orden YXZ para movimiento natural)
+            // Aplicar rotación a la cámara - ¡ESTA ES LA CLAVE!
             camera.rotation.order = 'YXZ';
             camera.rotation.y = currentRotationY * Math.PI / 180;
             camera.rotation.x = currentRotationX * Math.PI / 180;
             camera.rotation.z = 0;
             
-            const now = Date.now();
-            updateEnemyAnimations(now);
+            animateEnemies();
             renderer.render(scene, camera);
         }
         
-        // ------------------- INICIALIZAR JUEGO -------------------
-        async function initializeGame() {
-            startBtn.textContent = "⟡ INITIALIZING ⟡";
-            startBtn.disabled = true;
-            
-            await startCamera();
-            initThree();
-            initEnemies(6);
-            
-            gameActive = true;
-            
-            // Pedir permiso de giroscopio en iOS
+        // ========== SOLICITAR PERMISO GIROSCOPIO (iOS) ==========
+        async function requestGyroPermission() {
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 try {
-                    await DeviceOrientationEvent.requestPermission();
-                    window.addEventListener('deviceorientation', handleOrientation);
-                    gyroStatus.textContent = '🎯 GYRO: ACTIVE';
+                    const response = await DeviceOrientationEvent.requestPermission();
+                    if (response === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation);
+                        gyroStatusEl.textContent = '✅ GYRO: PERMITIDO';
+                        return true;
+                    }
                 } catch(e) {
-                    gyroStatus.textContent = '⚠️ GYRO: PERMISSION NEEDED';
+                    console.log('Gyro permission denied:', e);
+                    gyroStatusEl.textContent = '⚠️ GYRO: SIN PERMISO';
+                    return false;
                 }
             } else {
                 window.addEventListener('deviceorientation', handleOrientation);
-                gyroStatus.textContent = '🎯 GYRO: ACTIVE';
+                gyroStatusEl.textContent = '✅ GYRO: ACTIVO';
+                return true;
             }
-            
-            animate();
-            
-            window.addEventListener('resize', () => {
-                if(camera && renderer) {
-                    camera.aspect = window.innerWidth / window.innerHeight;
-                    camera.updateProjectionMatrix();
-                    renderer.setSize(window.innerWidth, window.innerHeight);
-                }
-            });
-            
-            document.addEventListener('click', handleShoot);
-            document.addEventListener('touchstart', handleShoot, { passive: false });
-            
-            window.addEventListener('keydown', (e) => {
-                if(!gameActive) return;
-                if(e.key === 'r' || e.key === 'R') {
-                    e.preventDefault();
-                    reloadGun();
-                }
-                if(e.key === 'c' || e.key === 'C') {
-                    calibrateGyro();
-                }
-            });
-            
-            updateUI();
-            startOverlay.style.opacity = '0';
-            setTimeout(() => {
-                startOverlay.style.display = 'none';
-            }, 500);
-            startBtn.disabled = false;
+            return false;
         }
         
-        startBtn.addEventListener('click', () => {
-            initializeGame().catch(err => {
-                console.error(err);
-                startBtn.textContent = "⚠️ RETRY";
-                startBtn.disabled = false;
+        // ========== INICIALIZAR JUEGO ==========
+        async function initGame() {
+            startBtn.textContent = '⟡ INICIANDO... ⟡';
+            startBtn.disabled = true;
+            
+            await initCamera();
+            initThree();
+            spawnEnemies();
+            
+            // Activar giroscopio
+            await requestGyroPermission();
+            
+            gameActive = true;
+            animate();
+            
+            // Event listeners
+            document.addEventListener('click', shoot);
+            document.addEventListener('touchstart', shoot);
+            
+            // Tecla R para recargar
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'r' || e.key === 'R') reload();
+                if (e.key === 'c' || e.key === 'C') calibrateGyro();
             });
-        });
-       
- 
-        restartBtn.addEventListener('click', () => {
-            restartGame();
-        });
+            
+            // Doble tap para calibrar
+            let lastTap = 0;
+            document.addEventListener('touchstart', (e) => {
+                const now = Date.now();
+                if (now - lastTap < 300) {
+                    e.preventDefault();
+                    calibrateGyro();
+                }
+                lastTap = now;
+            });
+            
+            // Resize handler
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            
+            startOverlay.style.display = 'none';
+            startBtn.disabled = false;
+            
+            // Mensaje de bienvenida
+            setTimeout(() => {
+                if (gameActive) {
+                    gyroStatusEl.textContent = '✅ GYRO: ACTIVO';
+                }
+            }, 500);
+        }
         
-        calibrateBtn.addEventListener('click', () => {
-            calibrateGyro();
-        });
+        startBtn.addEventListener('click', initGame);
+        restartBtn.addEventListener('click', restartGame);
+        
+        // Botón calibrar en game over
+        const calOverlayBtn = document.createElement('button');
+        calOverlayBtn.textContent = '🎯 CALIBRAR GIROSCOPIO';
+        calOverlayBtn.style.cssText = 'background:#000;color:#ff0000;border:2px solid #ff0000;padding:10px 25px;margin-top:10px;cursor:pointer;font-family:monospace;font-size:12px;';
+        calOverlayBtn.onclick = calibrateGyro;
+        document.getElementById('game-over').appendChild(calOverlayBtn);
+        
+        console.log('Script loaded - esperando inicio');
     })();
 </script>
 </body>
