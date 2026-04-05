@@ -196,7 +196,7 @@
         let cameraStream = null;
         let gltfLoader = null;
         let gltfModel = null;
-        let useGLB = true; // Fallback flag
+        let useGLB = false; // Force procedural for mobile performance
         
         // Initialize camera feed
         async function initCamera() {
