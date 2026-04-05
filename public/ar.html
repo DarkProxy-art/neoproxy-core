@@ -194,6 +194,9 @@
         let maxAmmo = 12;
         let isReloading = false;
         let cameraStream = null;
+        let gltfLoader = null;
+        let gltfModel = null;
+        let useGLB = true; // Fallback flag
         
         // Initialize camera feed
         async function initCamera() {
@@ -232,28 +235,71 @@
             const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
             directionalLight.position.set(1, 1, 1);
             scene.add(directionalLight);
+            
+            // Initialize GLTFLoader
+            gltfLoader = new THREE.GLTFLoader();
+            loadGLBModel();
         }
         
-        // Create enemy octahedron
+        // Load GLB model
+        function loadGLBModel() {
+            gltfLoader.load(
+                '/models/fragmentado.glb',
+                function(gltf) {
+                    gltfModel = gltf.scene;
+                    console.log('GLB model loaded successfully');
+                },
+                function(progress) {
+                    console.log('Loading progress:', progress);
+                },
+                function(error) {
+                    console.error('Failed to load GLB model:', error);
+                    useGLB = false; // Fallback to procedural
+                }
+            );
+        }
+        
+        // Create enemy (mixed types)
         function createEnemy() {
-            const geometry = new THREE.OctahedronGeometry(0.5);
-            const material = new THREE.MeshPhongMaterial({ 
-                color: 0xcc0000,
-                emissive: 0x660000,
-                emissiveIntensity: 0.2
-            });
-            const enemy = new THREE.Mesh(geometry, material);
+            const isGLBType = useGLB && gltfModel && Math.random() < 0.3; // 30% GLB
+            let enemy;
+            
+            if (isGLBType) {
+                // Type A: GLB model
+                enemy = gltfModel.clone();
+                enemy.scale.set(0.3, 0.3, 0.3);
+                
+                // Apply red emissive overlay to all materials
+                enemy.traverse((child) => {
+                    if (child.isMesh) {
+                        const material = child.material.clone();
+                        material.emissive = new THREE.Color(0x660000);
+                        material.emissiveIntensity = 0.3;
+                        child.material = material;
+                    }
+                });
+            } else {
+                // Type B: Procedural TorusKnot
+                const geometry = new THREE.TorusKnotGeometry(0.4, 0.15, 100, 16);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: 0xcc0000,
+                    wireframe: true
+                });
+                enemy = new THREE.Mesh(geometry, material);
+            }
             
             // Random position
             enemy.position.x = (Math.random() - 0.5) * 8;
             enemy.position.y = (Math.random() - 0.5) * 6;
             enemy.position.z = (Math.random() - 0.5) * 4;
             
-            // Random rotation speed
-            enemy.userData.rotationSpeed = {
-                x: Math.random() * 0.02,
-                y: Math.random() * 0.02,
-                z: Math.random() * 0.02
+            // Enemy behavior properties
+            enemy.userData = {
+                type: isGLBType ? 'GLB' : 'PROCEDURAL',
+                rotationSpeed: 0.003,
+                lastGlitchTime: Date.now(),
+                isHit: false,
+                originalScale: enemy.scale.x
             };
             
             scene.add(enemy);
@@ -300,32 +346,39 @@
         
         // Eliminate enemy
         function eliminateEnemy(enemy) {
-            // Remove from scene and array
-            scene.remove(enemy);
-            const index = enemies.indexOf(enemy);
-            if (index > -1) {
-                enemies.splice(index, 1);
-            }
+            enemy.userData.isHit = true;
             
-            // Update score
-            score += 100;
-            updateScore();
+            // Flash invisible for 100ms
+            enemy.visible = false;
             
-            // Show hit flash
-            showHitFlash();
-            
-            // Spawn new enemy
-            setTimeout(() => createEnemy(), 500);
-            
-            // Log to API
-            logKill();
+            setTimeout(() => {
+                // Remove from scene and array
+                scene.remove(enemy);
+                const index = enemies.indexOf(enemy);
+                if (index > -1) {
+                    enemies.splice(index, 1);
+                }
+                
+                // Update score
+                score += 100;
+                updateScore();
+                
+                // Show hit flash
+                showHitFlash();
+                
+                // Spawn new enemy
+                setTimeout(() => createEnemy(), 500);
+                
+                // Log to API
+                logKill();
+            }, 100);
         }
         
         // Show hit flash
         function showHitFlash() {
             const flash = document.createElement('div');
             flash.className = 'hit-flash';
-            flash.textContent = 'TARGET ELIMINATED';
+            flash.textContent = 'ECO DISUELTO';
             document.body.appendChild(flash);
             
             setTimeout(() => {
@@ -387,11 +440,28 @@
         function animate() {
             requestAnimationFrame(animate);
             
-            // Rotate enemies
+            const currentTime = Date.now();
+            
+            // Update enemies
             enemies.forEach(enemy => {
-                enemy.rotation.x += enemy.userData.rotationSpeed.x;
-                enemy.rotation.y += enemy.userData.rotationSpeed.y;
-                enemy.rotation.z += enemy.userData.rotationSpeed.z;
+                if (enemy.userData.isHit) return; // Skip if being eliminated
+                
+                // Jitter
+                enemy.position.x += (Math.random() - 0.5) * 0.003;
+                
+                // Scale glitch every 3 seconds
+                if (currentTime - enemy.userData.lastGlitchTime > 3000) {
+                    const glitchScale = Math.random() < 0.5 ? 0.8 : 1.2;
+                    enemy.scale.setScalar(glitchScale);
+                    setTimeout(() => {
+                        enemy.scale.setScalar(enemy.userData.originalScale);
+                    }, 16); // 1 frame at 60fps
+                    enemy.userData.lastGlitchTime = currentTime;
+                }
+                
+                // Slow imperfect rotation
+                const time = currentTime * 0.001;
+                enemy.rotation.y += enemy.userData.rotationSpeed + Math.sin(time) * 0.001;
             });
             
             renderer.render(scene, camera);
