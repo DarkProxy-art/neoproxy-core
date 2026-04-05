@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <title>NEO-PROXY AR | PERSISTENT HUNT - Passthrough + Inertial HUD</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #000; 
+            overflow: hidden; 
+            font-family: 'Courier New', monospace;
+            touch-action: none;
+        }
+        #renderCanvas { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 10; 
+        }
+        /* Marco HUD fijo estilo militar */
+        .hud-frame {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 20;
+            pointer-events: none;
+            border: 2px solid rgba(0,255,0,0.3);
+            box-shadow: inset 0 0 50px rgba(0,255,0,0.1);
+        }
+        .hud-corner {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-color: #0f0;
+            border-style: solid;
+        }
+        .corner-tl { top: 10px; left: 10px; border-width: 3px 0 0 3px; }
+        .corner-tr { top: 10px; right: 10px; border-width: 3px 3px 0 0; }
+        .corner-bl { bottom: 10px; left: 10px; border-width: 0 0 3px 3px; }
+        .corner-br { bottom: 10px; right: 10px; border-width: 0 3px 3px 0; }
+        
+        /* HUD flotante */
+        .hud-panel {
+            position: fixed;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid #0f0;
+            padding: 8px 12px;
+            z-index: 21;
+            backdrop-filter: blur(4px);
+            font-size: 10px;
+            color: #0f0;
+            pointer-events: none;
+        }
+        .panel-top-left { top: 20px; left: 80px; }
+        .panel-top-right { top: 20px; right: 20px; text-align: right; }
+        .panel-bottom { bottom: 20px; left: 20px; right: 20px; text-align: center; }
+        
+        .value { font-size: 18px; font-weight: bold; text-shadow: 0 0 5px #0f0; }
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0,255,0,0.08) 0px, rgba(0,255,0,0.08) 2px, transparent 2px, transparent 4px);
+            pointer-events: none;
+            z-index: 15;
+        }
+        .crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            z-index: 25;
+            pointer-events: none;
+        }
+        .crosshair::before, .crosshair::after {
+            content: '';
+            position: absolute;
+            background: #0f0;
+            box-shadow: 0 0 8px #0f0;
+        }
+        .crosshair::before { top: 50%; left: 0; right: 0; height: 2px; transform: translateY(-50%); }
+        .crosshair::after { left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%); }
+        .detection-box {
+            position: absolute;
+            border: 2px solid #ff0000;
+            box-shadow: 0 0 10px rgba(255,0,0,0.5);
+            z-index: 30;
+            pointer-events: none;
+            animation: pulse 0.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        @media (max-width: 768px) {
+            .hud-panel { font-size: 8px; padding: 4px 8px; }
+            .value { font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    
+    <!-- Marco HUD fijo -->
+    <div class="hud-frame">
+        <div class="hud-corner corner-tl"></div>
+        <div class="hud-corner corner-tr"></div>
+        <div class="hud-corner corner-bl"></div>
+        <div class="hud-corner corner-br"></div>
+    </div>
+    
+    <!-- Paneles informativos -->
+    <div class="hud-panel panel-top-left">
+        <div>NEO-PROXY // PERSISTENT HUNT</div>
+        <div>v3.0 | AR MODE</div>
+    </div>
+    
+    <div class="hud-panel panel-top-right">
+        <div>INTEGRITY</div>
+        <div class="value" id="healthValue">100%</div>
+        <div style="margin-top:5px">AMMO</div>
+        <div class="value" id="ammoValue">∞</div>
+    </div>
+    
+    <div class="hud-panel panel-bottom">
+        <div id="detectionStatus">🔍 SCANNING ENVIRONMENT...</div>
+        <div id="gyroData">ORIENTATION: --</div>
+    </div>
+    
+    <div class="scanlines"></div>
+    <div class="crosshair"></div>
+    <div id="boundingBoxes"></div>
+
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    
+    <script>
+        // ============================================
+        // NEO-PROXY PERSISTENT HUNT
+        // Passthrough AR + Inertial HUD + AI Detection
+        // ============================================
+        
+        let engine, scene, camera3D;
+        let videoElement;
+        let model;
+        let enemies = [];
+        let enemyMeshes = [];
+        let playerHealth = 100;
+        let score = 0;
+        
+        // Elementos UI
+        const healthEl = document.getElementById('healthValue');
+        const detectionStatus = document.getElementById('detectionStatus');
+        const gyroData = document.getElementById('gyroData');
+        const boundingBoxesDiv = document.getElementById('boundingBoxes');
+        
+        // ============================================
+        // 1. INICIALIZAR CÁMARA PARA PASSTHROUGH
+        // ============================================
+        async function initCamera() {
+            videoElement = document.createElement('video');
+            videoElement.setAttribute('autoplay', '');
+            videoElement.setAttribute('playsinline', '');
+            videoElement.setAttribute('muted', '');
+            videoElement.style.display = 'none';
+            document.body.appendChild(videoElement);
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: "environment",
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                });
+                videoElement.srcObject = stream;
+                await videoElement.play();
+                detectionStatus.innerHTML = "✅ CAMERA: ACTIVE";
+                return true;
+            } catch (err) {
+                console.error("Camera error:", err);
+                detectionStatus.innerHTML = "❌ CAMERA: REQUIRED";
+                return false;
+            }
+        }
+        
+        // ============================================
+        // 2. CREAR ESCENA 3D CON PASSTHROUGH
+        // ============================================
+        function create3DScene() {
+            const canvas = document.getElementById('renderCanvas');
+            engine = new BABYLON.Engine(canvas, true);
+            scene = new BABYLON.Scene(engine);
+            scene.autoClear = false; // CRUCIAL: permite ver el video detrás
+            
+            // Capa de video de fondo (Passthrough)
+            const videoTexture = new BABYLON.VideoTexture("video", videoElement, scene, true, true);
+            videoTexture.video = videoElement;
+            const backgroundLayer = new BABYLON.Layer("backgroundLayer", videoTexture, scene);
+            backgroundLayer.isBackground = true;
+            
+            // Cámara 3D que sigue al dispositivo
+            camera3D = new BABYLON.FreeCamera("arCamera", new BABYLON.Vector3(0, 0, -2), scene);
+            camera3D.setTarget(BABYLON.Vector3.Zero());
+            camera3D.fov = 0.7;
+            
+            // Iluminación para los objetos 3D
+            const ambientLight = new BABYLON.HemisphericLight("ambient", new BABYLON.Vector3(0, 1, 0), scene);
+            ambientLight.diffuse = new BABYLON.Color3(0.2, 0.8, 0.2);
+            ambientLight.intensity = 0.6;
+            
+            const pointLight = new BABYLON.PointLight("point", new BABYLON.Vector3(0, 2, 2), scene);
+            pointLight.intensity = 0.8;
+            pointLight.diffuse = new BABYLON.Color3(0, 1, 0);
+            
+            // Sistema de partículas para escaneo
+            const particleSystem = new BABYLON.ParticleSystem("scan", 300, scene);
+            particleSystem.emitter = new BABYLON.Vector3(0, 0, 1.5);
+            particleSystem.minEmitBox = new BABYLON.Vector3(-1, -0.5, 0);
+            particleSystem.maxEmitBox = new BABYLON.Vector3(1, 0.5, 0);
+            particleSystem.color1 = new BABYLON.Color4(0, 1, 0, 0.8);
+            particleSystem.color2 = new BABYLON.Color4(0, 0.5, 0, 0.5);
+            particleSystem.minSize = 0.03;
+            particleSystem.maxSize = 0.08;
+            particleSystem.minLifeTime = 0.3;
+            particleSystem.maxLifeTime = 1;
+            particleSystem.emitRate = 80;
+            particleSystem.start();
+            
+            return scene;
+        }
+        
+        // ============================================
+        // 3. SENSORES INERCIALES (Giroscopio + Acelerómetro)
+        // ============================================
+        function initInertialHUD() {
+            if (!window.DeviceOrientationEvent) {
+                gyroData.innerHTML = "GYRO: NOT SUPPORTED";
+                return;
+            }
+            
+            window.addEventListener('deviceorientation', (event) => {
+                const alpha = event.alpha || 0; // Brújula
+                const beta = event.beta || 0;   // Inclinación frontal
+                const gamma = event.gamma || 0; // Inclinación lateral
+                
+                // Actualizar HUD inercial
+                gyroData.innerHTML = `🎯 AZ: ${Math.floor(alpha)}° | PITCH: ${Math.floor(beta)}° | ROLL: ${Math.floor(gamma)}°`;
+                
+                // Mover cámara 3D según movimiento del teléfono
+                if (camera3D) {
+                    camera3D.rotation.x = BABYLON.Tools.ToRadians(Math.max(-60, Math.min(60, beta - 80)));
+                    camera3D.rotation.y = BABYLON.Tools.ToRadians(Math.max(-50, Math.min(50, gamma)));
+                }
+                
+                // Efecto de brillo en HUD al mover
+                const intensity = Math.abs(gamma) / 90;
+                document.querySelectorAll('.hud-panel').forEach(panel => {
+                    panel.style.borderColor = `rgba(0, 255, 0, ${0.5 + intensity * 0.5})`;
+                });
+            });
+            
+            gyroData.innerHTML = "GYRO: ACTIVE";
+        }
+        
+        // ============================================
+        // 4. CREAR ENEMIGOS 3D (Poliedros rojos)
+        // ============================================
+        function spawnEnemy3D(x, y, z) {
+            if (!scene) return null;
+            
+            // Crear un poliedro rojo (icosaedro)
+            const enemy = BABYLON.MeshBuilder.CreateIcoSphere(`enemy_${Date.now()}`, { radius: 0.25, subdivisions: 1 }, scene);
+            const material = new BABYLON.StandardMaterial(`enemyMat_${Date.now()}`, scene);
+            material.diffuseColor = new BABYLON.Color3(1, 0.2, 0);
+            material.emissiveColor = new BABYLON.Color3(0.5, 0, 0);
+            material.specularColor = new BABYLON.Color3(1, 0.3, 0);
+            enemy.material = material;
+            
+            enemy.position = new BABYLON.Vector3(x, y, z);
+            
+            // Animación de flotación y rotación
+            let time = 0;
+            const animate = () => {
+                if (enemy.isDisposed()) return;
+                time += 0.03;
+                enemy.position.y += Math.sin(time * 3) * 0.005;
+                enemy.rotation.x += 0.03;
+                enemy.rotation.y += 0.04;
+                enemy.rotation.z += 0.02;
+                requestAnimationFrame(animate);
+            };
+            animate();
+            
+            return enemy;
+        }
+        
+        function spawnWave() {
+            // Limpiar enemigos anteriores
+            enemyMeshes.forEach(e => e.dispose());
+            enemies = [];
+            enemyMeshes = [];
+            
+            // Crear 5 enemigos alrededor del jugador
+            const angles = [0, 72, 144, 216, 288].map(a => a * Math.PI / 180);
+            angles.forEach(angle => {
+                const x = Math.cos(angle) * 2.5;
+                const z = Math.sin(angle) * 2.5;
+                const enemy = spawnEnemy3D(x, -0.5, z + 1);
+                if (enemy) {
+                    enemyMeshes.push(enemy);
+                    enemies.push({ health: 50, speed: 0.008, mesh: enemy, x: x, z: z });
+                }
+            });
+        }
+        
+        // ============================================
+        // 5. TENSORFLOW.JS - DETECCIÓN DE OBJETOS
+        // ============================================
+        async function initAI() {
+            detectionStatus.innerHTML = "🤖 AI: LOADING MODEL...";
+            try {
+                model = await cocoSsd.load();
+                detectionStatus.innerHTML = "✅ AI: COCO-SSD ACTIVE";
+                startDetectionLoop();
+            } catch (err) {
+                console.error("AI Error:", err);
+                detectionStatus.innerHTML = "❌ AI: ERROR";
+            }
+        }
+        
+        function startDetectionLoop() {
+            async function detect() {
+                if (!model || !videoElement || videoElement.readyState !== 4) {
+                    requestAnimationFrame(detect);
+                    return;
+                }
+                
+                try {
+                    const predictions = await model.detect(videoElement);
+                    boundingBoxesDiv.innerHTML = '';
+                    
+                    predictions.forEach(pred => {
+                        if (pred.score > 0.5) {
+                            // Crear bounding box en pantalla
+                            const box = document.createElement('div');
+                            box.className = 'detection-box';
+                            box.style.left = `${pred.bbox[0]}px`;
+                            box.style.top = `${pred.bbox[1]}px`;
+                            box.style.width = `${pred.bbox[2]}px`;
+                            box.style.height = `${pred.bbox[3]}px`;
+                            box.innerHTML = `<span style="position:absolute; top:-20px; left:0; background:#000; color:#0f0; font-size:10px; padding:2px 5px;">${pred.class.toUpperCase()} [${(pred.score*100).toFixed(0)}%]</span>`;
+                            boundingBoxesDiv.appendChild(box);
+                            
+                            // Si detecta persona, mover un enemigo hacia esa dirección
+                            if (pred.class === 'person' && enemyMeshes.length > 0) {
+                                const targetX = (pred.bbox[0] / window.innerWidth - 0.5) * 3;
+                                const targetY = (pred.bbox[1] / window.innerHeight - 0.5) * 2;
+                                enemyMeshes.forEach(enemy => {
+                                    enemy.position.x += (targetX - enemy.position.x) * 0.02;
+                                    enemy.position.y += (-targetY - enemy.position.y) * 0.02;
+                                });
+                            }
+                        }
+                    });
+                    
+                    if (predictions.length > 0) {
+                        detectionStatus.innerHTML = `🔍 DETECTED: ${predictions.length} OBJECTS`;
+                    } else {
+                        detectionStatus.innerHTML = `🔍 SCANNING: NO TARGETS`;
+                    }
+                    
+                } catch (err) {
+                    console.error("Detection error:", err);
+                }
+                
+                requestAnimationFrame(detect);
+            }
+            
+            detect();
+        }
+        
+        // ============================================
+        // 6. LÓGICA DE JUEGO Y DISPARO
+        // ============================================
+        let lastShot = 0;
+        let shotDelay = 300;
+        
+        function shoot() {
+            const now = Date.now();
+            if (now - lastShot < shotDelay) return;
+            lastShot = now;
+            
+            // Disparar al enemigo más cercano
+            let closest = null;
+            let closestDist = Infinity;
+            enemyMeshes.forEach(enemy => {
+                const dist = BABYLON.Vector3.Distance(camera3D.position, enemy.position);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closest = enemy;
+                }
+            });
+            
+            if (closest && closestDist < 3) {
+                const idx = enemyMeshes.indexOf(closest);
+                if (idx !== -1) {
+                    closest.dispose();
+                    enemyMeshes.splice(idx, 1);
+                    enemies.splice(idx, 1);
+                    score += 100;
+                    
+                    // Efecto de impacto
+                    detectionStatus.innerHTML = `💥 ELIMINATED! SCORE: ${score}`;
+                    
+                    // Reponer enemigo
+                    const angle = Math.random() * Math.PI * 2;
+                    const newEnemy = spawnEnemy3D(Math.cos(angle) * 2.5, -0.5, Math.sin(angle) * 2.5 + 1);
+                    if (newEnemy) {
+                        enemyMeshes.push(newEnemy);
+                        enemies.push({ health: 50, speed: 0.008, mesh: newEnemy });
+                    }
+                }
+            }
+        }
+        
+        // ============================================
+        // 7. ACTUALIZACIÓN Y RENDER
+        // ============================================
+        function updateGame() {
+            if (!scene) return;
+            
+            // Mover enemigos hacia la cámara
+            enemyMeshes.forEach(enemy => {
+                const direction = new BABYLON.Vector3.Zero();
+                direction.copyFrom(camera3D.position);
+                direction.subtractInPlace(enemy.position);
+                direction.normalize();
+                enemy.position.addInPlace(direction.scale(0.008));
+            });
+            
+            // Actualizar HUD
+            healthEl.innerHTML = `${playerHealth}%`;
+            
+            // Efecto de daño por cercanía
+            enemyMeshes.forEach(enemy => {
+                const dist = BABYLON.Vector3.Distance(camera3D.position, enemy.position);
+                if (dist < 0.8) {
+                    playerHealth = Math.max(0, playerHealth - 0.5);
+                    healthEl.style.color = playerHealth < 30 ? '#ff0000' : '#0f0';
+                    if (playerHealth <= 0) {
+                        detectionStatus.innerHTML = "💀 SYSTEM FAILURE - RESTARTING...";
+                        playerHealth = 100;
+                        score = 0;
+                        spawnWave();
+                    }
+                }
+            });
+        }
+        
+        // ============================================
+        // 8. INICIALIZACIÓN COMPLETA
+        // ============================================
+        async function init() {
+            // Iniciar cámara
+            const cameraReady = await initCamera();
+            if (!cameraReady) return;
+            
+            // Crear escena 3D
+            const bjsScene = create3DScene();
+            
+            // Inicializar sensores
+            initInertialHUD();
+            
+            // Iniciar IA
+            await initAI();
+            
+            // Spawn de enemigos
+            spawnWave();
+            
+            // Evento de disparo (tap en pantalla)
+            document.body.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                shoot();
+            });
+            document.body.addEventListener('mousedown', () => shoot());
+            
+            // Loop de renderizado
+            engine.runRenderLoop(() => {
+                updateGame();
+                scene.render();
+            });
+            
+            window.addEventListener('resize', () => engine.resize());
+            
+            detectionStatus.innerHTML = "✅ SYSTEM ONLINE - TAP TO ENGAGE";
+        }
+        
+        init();
+    </script>
+</body>
+</html>
