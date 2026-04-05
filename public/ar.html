@@ -196,7 +196,7 @@
         let cameraStream = null;
         let gltfLoader = null;
         let gltfModel = null;
-        let useGLB = false; // Force procedural for mobile performance
+        let useGLB = true; // Use lightweight GLB (1.8MB)
         
         // Initialize camera feed
         async function initCamera() {
