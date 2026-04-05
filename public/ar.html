@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NEO·PROXY COMBAT // GLITCH ARENA</title>
+    <title>NEO·PROXY COMBAT // GYRO AR MODE</title>
     <style>
         * {
             margin: 0;
@@ -43,7 +43,6 @@
             display: block;
         }
 
-        /* HUD elements */
         .hud {
             position: absolute;
             z-index: 3;
@@ -82,19 +81,18 @@
         .bottom-left {
             bottom: 20px;
             left: 20px;
-            font-size: 12px;
+            font-size: 11px;
             border-left: 3px solid #ff2a2a;
         }
 
         .bottom-right {
             bottom: 20px;
             right: 20px;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             background: rgba(0, 0, 0, 0.8);
         }
 
-        /* Crosshair */
         .crosshair {
             position: absolute;
             top: 50%;
@@ -103,13 +101,11 @@
             z-index: 10;
             pointer-events: none;
             opacity: 0.9;
-            transition: 0.05s linear;
         }
         .crosshair svg {
             filter: drop-shadow(0 0 3px #ff0000);
         }
 
-        /* Reload indicator */
         .reload-indicator {
             position: absolute;
             top: 50%;
@@ -162,7 +158,6 @@
             100% { opacity: 0; transform: translate(-50%, -80%); }
         }
 
-        /* START OVERLAY — CYBERPUNK GLITCH */
         #start-overlay {
             position: fixed;
             top: 0;
@@ -228,12 +223,65 @@
             letter-spacing: 1px;
             background: rgba(0,0,0,0.6);
             padding: 8px 16px;
+            text-align: center;
+        }
+
+        #game-over {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 200;
+            font-family: monospace;
+        }
+
+        #game-over h1 {
+            color: #ff0000;
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px red;
+        }
+
+        #final-score {
+            color: #ff6666;
+            font-size: 2rem;
+            margin-bottom: 30px;
+        }
+
+        #restart-btn, #calibrate-btn {
+            background: #000;
+            color: #ff0000;
+            border: 2px solid #ff0000;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            font-family: monospace;
+            margin: 10px;
+        }
+
+        .gyro-status {
+            position: absolute;
+            top: 80px;
+            right: 18px;
+            background: rgba(0,0,0,0.7);
+            padding: 4px 8px;
+            font-size: 9px;
+            color: #ff6666;
+            z-index: 3;
+            border-radius: 4px;
+            pointer-events: none;
         }
 
         @media (max-width: 600px) {
             .glitch-title { font-size: 1.8rem; letter-spacing: 3px; }
             #start-button { padding: 12px 28px; font-size: 1.1rem; }
-            .bottom-right { font-size: 14px; }
+            .bottom-right { font-size: 12px; }
             .hit-flash { font-size: 1rem; padding: 6px 14px; white-space: nowrap; }
             .reload-indicator { font-size: 1.2rem; padding: 8px 18px; }
         }
@@ -245,7 +293,7 @@
 <canvas id="game-canvas"></canvas>
 
 <div class="hud top-bar">
-    <div>⧉ NEO·PROXY // FRAGMENTUM</div>
+    <div>⧉ NEO·PROXY // GYRO AR</div>
     <div id="score" class="score-label">SCORE: 0</div>
 </div>
 
@@ -260,19 +308,30 @@
 </div>
 
 <div class="hud bottom-left">
-    <div>⚡ OPERATOR: DARKPROXY // GLITCH ACTIVE</div>
-    <div style="font-size: 10px;">⟳ R | TAP/CLICK to TERMINATE</div>
+    <div>🎮 GYRO ACTIVE // MOVE PHONE TO AIM</div>
+    <div style="font-size: 9px;">⟳ R | TAP TO FIRE | CALIBRATE: LONG PRESS</div>
 </div>
 
 <div class="hud bottom-right">
     <div id="ammo">🔫 AMMO: 12 / 12</div>
+    <div id="wave-info" style="font-size: 9px; margin-top: 4px;">SPEED LVL 1</div>
 </div>
 
+<div class="gyro-status" id="gyro-status">⚡ GYRO: CALIBRATING...</div>
+
 <div id="reload-indicator" class="reload-indicator">⟳ RELOADING... ⟳</div>
+
 <div id="start-overlay">
     <div class="glitch-title">// NEO·PROXY COMBAT \\</div>
-    <button id="start-button">⟡ INITIALIZE AR LINK ⟡</button>
-    <div class="instruction-tag">[ CAMERA ACCESS REQUIRED ] — ELIMINATE GLITCH ENTITIES</div>
+    <button id="start-button">⟡ INITIALIZE GYRO AR ⟡</button>
+    <div class="instruction-tag">[ GIRO + ACELERÓMETRO ] — MUVE EL CELULAR PARA APUNTAR</div>
+</div>
+
+<div id="game-over">
+    <h1>💀 GAME OVER 💀</h1>
+    <div id="final-score">SCORE: 0</div>
+    <button id="restart-btn">⟳ RESTART MISSION ⟳</button>
+    <button id="calibrate-btn">🎯 CALIBRATE GYRO</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -281,88 +340,163 @@
     (function(){
         // ------------------- GLOBAL STATE -------------------
         let scene, camera, renderer, raycaster;
-        let enemies = [];            // stores enemy meshes
+        let enemies = [];
         let score = 0;
         let ammo = 12;
         const MAX_AMMO = 12;
         let isReloading = false;
-        let cameraStreamActive = false;
-        let animationId = null;
         let gameActive = false;
+        let approachSpeed = 0.008;
+        let speedMultiplier = 1.0;
+        let lastSpeedIncrease = Date.now();
+        
+        // Gyroscope variables
+        let targetRotationX = 0;    // beta (front-back)
+        let targetRotationY = 0;    // gamma (left-right)
+        let currentRotationX = 0;
+        let currentRotationY = 0;
+        let gyroEnabled = false;
+        let calibrationOffsetX = 0;
+        let calibrationOffsetY = 0;
+        let initialBeta = null;
+        let initialGamma = null;
+        
+        // Smoothing factor (low-pass filter)
+        const SMOOTHING = 0.12;
         
         // DOM elements
         const scoreEl = document.getElementById('score');
         const ammoEl = document.getElementById('ammo');
+        const waveInfo = document.getElementById('wave-info');
         const reloadIndicator = document.getElementById('reload-indicator');
         const startOverlay = document.getElementById('start-overlay');
+        const gameOverlay = document.getElementById('game-over');
+        const finalScoreEl = document.getElementById('final-score');
         const startBtn = document.getElementById('start-button');
+        const restartBtn = document.getElementById('restart-btn');
+        const calibrateBtn = document.getElementById('calibrate-btn');
+        const gyroStatus = document.getElementById('gyro-status');
         const videoFeed = document.getElementById('camera-feed');
         
-        // ------------------- CREATE GLITCH ENEMIES (NO EXTERNAL ASSETS) -------------------
-        // 3 different archetypes: torusKnot (wireframe), icosahedron (emissive), dodecahedron (glitch metal)
+        // ------------------- GYROSCOPE INITIALIZATION -------------------
+        function requestGyroPermission() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                // iOS needs explicit permission
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => {
+                        if (response === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                            gyroEnabled = true;
+                            gyroStatus.textContent = '🎯 GYRO: ACTIVE';
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Android and other devices
+                window.addEventListener('deviceorientation', handleOrientation);
+                gyroEnabled = true;
+                gyroStatus.textContent = '🎯 GYRO: ACTIVE';
+            }
+        }
+        
+        function handleOrientation(event) {
+            if (!gameActive) return;
+            
+            // beta: front-back (-180 to 180) - rotation around X axis
+            // gamma: left-right (-90 to 90) - rotation around Y axis
+            let beta = event.beta;
+            let gamma = event.gamma;
+            
+            if (beta === null || gamma === null) return;
+            
+            // calibrate with initial values
+            if (initialBeta === null && gameActive) {
+                initialBeta = beta;
+                initialGamma = gamma;
+                gyroStatus.textContent = '🎯 GYRO: CALIBRATED';
+                setTimeout(() => {
+                    if(gyroStatus) gyroStatus.style.opacity = '0.7';
+                }, 2000);
+            }
+            
+            // apply calibration offset
+            let rawX = (beta || 0) - (initialBeta || 0);
+            let rawY = (gamma || 0) - (initialGamma || 0);
+            
+            // apply additional manual offset
+            rawX -= calibrationOffsetX;
+            rawY -= calibrationOffsetY;
+            
+            // clamp values for realistic movement (±45 degrees max for comfort)
+            const maxAngle = 45;
+            targetRotationX = Math.min(maxAngle, Math.max(-maxAngle, rawX * 0.8));
+            targetRotationY = Math.min(maxAngle, Math.max(-maxAngle, rawY * 0.8));
+        }
+        
+        function calibrateGyro() {
+            // reset offsets to current position
+            calibrationOffsetX = 0;
+            calibrationOffsetY = 0;
+            initialBeta = null;
+            initialGamma = null;
+            targetRotationX = 0;
+            targetRotationY = 0;
+            currentRotationX = 0;
+            currentRotationY = 0;
+            gyroStatus.textContent = '🎯 GYRO: RECALIBRATING...';
+            setTimeout(() => {
+                if(gyroStatus) gyroStatus.textContent = '🎯 GYRO: ACTIVE';
+            }, 1500);
+        }
+        
+        // ------------------- CREATE ENEMIES -------------------
         function getRandomEnemyGeometry() {
             const r = Math.random();
             if (r < 0.4) {
-                // Twisted knot — aggressive look
-                const geom = new THREE.TorusKnotGeometry(0.42, 0.12, 140, 12, 3, 4);
-                return geom;
+                return new THREE.TorusKnotGeometry(0.42, 0.12, 140, 12, 3, 4);
             } else if (r < 0.7) {
-                // Icosahedron - angular anomaly
-                const geom = new THREE.IcosahedronGeometry(0.38, 0);
-                return geom;
+                return new THREE.IcosahedronGeometry(0.38, 0);
             } else {
-                // Dodecahedron + extra spikes vibe (octahedron variant for edge)
-                const geom = new THREE.DodecahedronGeometry(0.36, 0);
-                return geom;
+                return new THREE.DodecahedronGeometry(0.36, 0);
             }
         }
         
         function createEnemy() {
             let geometry = getRandomEnemyGeometry();
-            // Glow / emissive red material with slight roughness variation
             const material = new THREE.MeshStandardMaterial({
                 color: 0xcc1a1a,
                 emissive: 0x441111,
                 emissiveIntensity: 0.55,
                 metalness: 0.7,
-                roughness: 0.35,
-                flatShading: false
+                roughness: 0.35
             });
             
             const enemyMesh = new THREE.Mesh(geometry, material);
             
-            // random position within frustum range (camera at Z=5, visible from Z=1.5 to 4.5)
-            enemyMesh.position.x = (Math.random() - 0.5) * 7.2;   // -3.6 to 3.6
-            enemyMesh.position.y = (Math.random() - 0.5) * 5.2;   // -2.6 to 2.6
-            enemyMesh.position.z = 2 + Math.random() * 3.2;       // 2.0 to 5.2
-            // random rotation offset
+            enemyMesh.position.x = (Math.random() - 0.5) * 7.2;
+            enemyMesh.position.y = (Math.random() - 0.5) * 5.2;
+            enemyMesh.position.z = 5 + Math.random() * 4;
+            
             enemyMesh.rotation.x = Math.random() * Math.PI * 2;
             enemyMesh.rotation.y = Math.random() * Math.PI * 2;
             enemyMesh.rotation.z = Math.random() * Math.PI * 2;
             
-            // metadata for glitch behavior
             enemyMesh.userData = {
-                type: 'GLITCH_ENTITY',
+                type: 'APPROACHER',
                 rotationSpeed: 0.008 + Math.random() * 0.012,
-                jitterIntensity: 0.0025,
                 lastGlitchTime: Date.now(),
-                glitchInterval: 1800 + Math.random() * 1800, // 1.8-3.6 sec
-                originalScale: 1,
-                pulsePhase: Math.random() * Math.PI * 2,
-                wireframeToggle: false
+                glitchInterval: 1800 + Math.random() * 1800,
+                originalScale: 0.9 + Math.random() * 0.5,
+                pulsePhase: Math.random() * Math.PI * 2
             };
             
-            // apply initial scale (some slight variance)
-            const randScale = 0.85 + Math.random() * 0.5;
+            const randScale = enemyMesh.userData.originalScale;
             enemyMesh.scale.set(randScale, randScale, randScale);
-            enemyMesh.userData.originalScale = randScale;
             
             return enemyMesh;
         }
         
-        // populate initial enemies (keep between 5 and 7)
-        function initEnemies(count = 6) {
-            // clear existing
+        function initEnemies(count = 5) {
             enemies.forEach(e => scene.remove(e));
             enemies = [];
             for(let i = 0; i < count; i++) {
@@ -372,57 +506,78 @@
             }
         }
         
-        // spawn a single new enemy after elimination
         function spawnNewEnemy() {
             const newEnemy = createEnemy();
             scene.add(newEnemy);
             enemies.push(newEnemy);
         }
         
-        // ------------------- ELIMINATION & GAME MECHANICS -------------------
+        // ------------------- GAME OVER -------------------
+        function endGame() {
+            gameActive = false;
+            finalScoreEl.textContent = `SCORE: ${score}`;
+            gameOverlay.style.display = 'flex';
+        }
+        
+        function restartGame() {
+            score = 0;
+            ammo = MAX_AMMO;
+            approachSpeed = 0.008;
+            speedMultiplier = 1.0;
+            lastSpeedIncrease = Date.now();
+            updateUI();
+            
+            enemies.forEach(e => scene.remove(e));
+            enemies = [];
+            initEnemies(5);
+            
+            // reset gyro calibration
+            initialBeta = null;
+            initialGamma = null;
+            targetRotationX = 0;
+            targetRotationY = 0;
+            currentRotationX = 0;
+            currentRotationY = 0;
+            
+            gameActive = true;
+            gameOverlay.style.display = 'none';
+            gyroStatus.textContent = '🎯 GYRO: ACTIVE';
+        }
+        
+        // ------------------- MECÁNICAS -------------------
         function showHitFlash() {
             const flashDiv = document.createElement('div');
             flashDiv.className = 'hit-flash';
-            flashDiv.textContent = '⚡ ECO DISUELTO ⚡';
+            flashDiv.textContent = '⚡ ELIMINATED ⚡';
             document.body.appendChild(flashDiv);
             setTimeout(() => {
                 if(flashDiv && flashDiv.remove) flashDiv.remove();
             }, 800);
         }
         
-        async function logKillMock() {
-            // silent mock - no external API needed but keep game self-contained
-            if (typeof window !== 'undefined') {
-                // just for immersion, store in console
-                console.log(`[PROXY_LOG] KILL | SCORE: ${score} | TIMESTAMP: ${new Date().toISOString()}`);
-            }
-        }
-        
         function updateUI() {
             scoreEl.textContent = `SCORE: ${score}`;
             ammoEl.textContent = `🔫 AMMO: ${ammo} / ${MAX_AMMO}`;
+            const speedLevel = Math.floor(speedMultiplier * 10) / 10;
+            waveInfo.textContent = `⚡ SPEED LVL ${speedLevel.toFixed(1)}x`;
         }
         
         function eliminateEnemy(enemyMesh) {
             if (!enemyMesh || !enemyMesh.parent) return false;
             
-            // remove from scene & array
             scene.remove(enemyMesh);
             const idx = enemies.indexOf(enemyMesh);
             if(idx !== -1) enemies.splice(idx, 1);
             
-            // update score & ui
             score += 100;
             updateUI();
             showHitFlash();
-            logKillMock();
             
-            // respawn new enemy after slight delay to keep field dynamic
             setTimeout(() => {
                 if(gameActive) {
                     spawnNewEnemy();
                 }
-            }, 400);
+            }, 300);
             return true;
         }
         
@@ -438,36 +593,21 @@
                 isReloading = false;
                 reloadIndicator.style.display = 'none';
                 updateUI();
-                // small haptic-like feedback
             }, 2000);
         }
         
-        // SHOOTING LOGIC with raycasting
+        // SHOOTING with raycasting from camera center
         function handleShoot(event) {
             if(!gameActive) return;
             if(isReloading) return;
             if(ammo <= 0) {
-                // auto reload if empty
                 reloadGun();
                 return;
             }
             
-            // get precise coordinates
-            let clientX, clientY;
-            if(event.touches) {
-                clientX = event.touches[0].clientX;
-                clientY = event.touches[0].clientY;
-                event.preventDefault();  // avoid zoom
-            } else {
-                clientX = event.clientX;
-                clientY = event.clientY;
-            }
-            
-            const mouse = new THREE.Vector2();
-            mouse.x = (clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
-            
-            raycaster.setFromCamera(mouse, camera);
+            // Ray from center of screen (camera direction)
+            const center = new THREE.Vector2(0, 0);
+            raycaster.setFromCamera(center, camera);
             const intersects = raycaster.intersectObjects(enemies);
             
             if(intersects.length > 0) {
@@ -476,49 +616,68 @@
                 ammo--;
                 updateUI();
                 
-                // if ammo reaches zero, start reload
-                if(ammo === 0) {
-                    reloadGun();
-                }
-            } else {
-                // miss effect: subtle crosshair pulse but no penalty
+                // visual feedback: crosshair flash
                 const crosshairSvg = document.querySelector('.crosshair svg');
                 if(crosshairSvg) {
-                    crosshairSvg.style.transform = 'scale(0.9)';
+                    crosshairSvg.style.transform = 'scale(0.85)';
                     setTimeout(() => { if(crosshairSvg) crosshairSvg.style.transform = ''; }, 80);
+                }
+                
+                if(ammo === 0) {
+                    reloadGun();
                 }
             }
         }
         
-        // ------------------- ANIMATION & GLITCH BEHAVIOR -------------------
-        function updateEnemyGlitches(currentTime) {
+        // ------------------- ANIMACIÓN Y ACERCAMIENTO -------------------
+        function updateEnemies(currentTime) {
+            const now = currentTime;
+            
+            if(now - lastSpeedIncrease > 5000 && gameActive) {
+                speedMultiplier += 0.15;
+                if(speedMultiplier > 2.5) speedMultiplier = 2.5;
+                lastSpeedIncrease = now;
+                updateUI();
+            }
+            
+            const currentSpeed = approachSpeed * speedMultiplier;
+            
             for(let i = 0; i < enemies.length; i++) {
                 const enemy = enemies[i];
                 if(!enemy) continue;
                 const data = enemy.userData;
-                const now = currentTime;
                 
-                // --- Jitter movement (makes them unnerving)
-                enemy.position.x += (Math.random() - 0.5) * 0.004;
-                enemy.position.y += (Math.random() - 0.5) * 0.004;
-                // keep within boundaries (optional but not critical)
-                enemy.position.x = Math.min(Math.max(enemy.position.x, -5.2), 5.2);
+                enemy.position.z -= currentSpeed;
+                
+                const distance = Math.max(0.5, enemy.position.z);
+                const scaleFactor = Math.min(1.8, 1.2 + (5 - Math.min(5, distance)) * 0.15);
+                const targetScale = data.originalScale * scaleFactor;
+                enemy.scale.setScalar(targetScale);
+                
+                if(enemy.position.z < 0.8) {
+                    endGame();
+                    return;
+                }
+                
+                if(enemy.position.z > 9) {
+                    enemy.position.z = 5;
+                }
+                
+                enemy.position.x += (Math.random() - 0.5) * 0.006;
+                enemy.position.y += (Math.random() - 0.5) * 0.006;
+                enemy.position.x = Math.min(Math.max(enemy.position.x, -5.5), 5.5);
                 enemy.position.y = Math.min(Math.max(enemy.position.y, -4), 4);
                 
-                // --- rotation with chaotic modulation
                 const timeSec = now * 0.002;
                 const rotMod = Math.sin(timeSec + data.pulsePhase) * 0.015;
                 enemy.rotation.x += data.rotationSpeed * 0.7 + rotMod * 0.02;
                 enemy.rotation.y += data.rotationSpeed + Math.sin(timeSec * 1.3) * 0.005;
                 enemy.rotation.z += data.rotationSpeed * 0.5;
                 
-                // --- GLITCH EFFECT (scale pop / material flicker)
                 if(now - data.lastGlitchTime > data.glitchInterval) {
-                    // GLITCH ACTIVATED: random scale distortion and emissive intensity burst
-                    const glitchScale = 1.25 + Math.random() * 0.6;
+                    const glitchScale = 1.3 + Math.random() * 0.5;
                     enemy.scale.setScalar(glitchScale);
                     
-                    // intense emissive flash
                     if(enemy.material) {
                         const originalEmissive = enemy.material.emissiveIntensity || 0.55;
                         enemy.material.emissiveIntensity = 1.2;
@@ -531,36 +690,29 @@
                         }, 120);
                     }
                     
-                    // also small position warp
-                    enemy.position.x += (Math.random() - 0.5) * 0.08;
-                    enemy.position.y += (Math.random() - 0.5) * 0.08;
-                    
                     setTimeout(() => {
                         if(enemy && enemy.scale) {
-                            enemy.scale.setScalar(data.originalScale);
+                            const finalScale = data.originalScale * Math.min(1.8, 1.2 + (5 - Math.min(5, enemy.position.z)) * 0.15);
+                            enemy.scale.setScalar(finalScale);
                         }
                     }, 150);
                     
                     data.lastGlitchTime = now;
-                    // randomize next glitch interval
                     data.glitchInterval = 1400 + Math.random() * 2200;
                 }
                 
-                // subtle pulsing emission (minor)
                 if(enemy.material) {
-                    const intensity = 0.5 + Math.sin(Date.now() * 0.006 + data.pulsePhase) * 0.25;
-                    enemy.material.emissiveIntensity = Math.min(0.9, Math.max(0.3, intensity));
+                    const intensity = 0.5 + Math.sin(Date.now() * 0.006 + data.pulsePhase) * 0.3;
+                    enemy.material.emissiveIntensity = Math.min(1.0, Math.max(0.3, intensity));
                 }
             }
         }
         
-        // ------------------- THREE.JS SETUP -------------------
+        // ------------------- THREE.JS -------------------
         function initThree() {
             scene = new THREE.Scene();
-            // camera: perspective, matches AR overlay
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.2, 20);
             camera.position.set(0, 0, 5);
-            camera.lookAt(0, 0, 0);
             
             renderer = new THREE.WebGLRenderer({ 
                 canvas: document.getElementById('game-canvas'),
@@ -568,11 +720,10 @@
                 antialias: true
             });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setClearColor(0x000000, 0); // transparent background for camera feed
+            renderer.setClearColor(0x000000, 0);
             
             raycaster = new THREE.Raycaster();
             
-            // lighting for 3D objects to pop against camera
             const ambient = new THREE.AmbientLight(0x332222);
             scene.add(ambient);
             const mainLight = new THREE.DirectionalLight(0xffaa88, 1.2);
@@ -585,11 +736,10 @@
             backLight.position.set(-1, 1, -2);
             scene.add(backLight);
             
-            // optional: tiny red fog for depth? not necessary but adds style
-            scene.fog = new THREE.FogExp2(0x000000, 0.018);
+            scene.fog = new THREE.FogExp2(0x000000, 0.02);
         }
         
-        // ------------------- CAMERA INIT -------------------
+        // ------------------- CAMARA -------------------
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
@@ -597,100 +747,133 @@
                     audio: false
                 });
                 videoFeed.srcObject = stream;
-                cameraStreamActive = true;
                 return true;
             } catch (err) {
-                console.warn("Back camera failed, trying default:", err);
                 try {
                     const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
                     videoFeed.srcObject = fallbackStream;
-                    cameraStreamActive = true;
                     return true;
                 } catch (err2) {
-                    console.error("Camera access denied:", err2);
-                    // fallback: black background but we still allow game
                     videoFeed.style.display = "none";
-                    cameraStreamActive = false;
                     return false;
                 }
             }
         }
         
-        // ------------------- FULL GAME START -------------------
+        // ------------------- ANIMATION LOOP -------------------
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if(!gameActive) {
+                renderer.render(scene, camera);
+                return;
+            }
+            
+            // Smooth gyro interpolation
+            currentRotationX += (targetRotationX - currentRotationX) * SMOOTHING;
+            currentRotationY += (targetRotationY - currentRotationY) * SMOOTHING;
+            
+            // Apply rotation to camera (AR style)
+            camera.rotation.order = 'YXZ';
+            camera.rotation.x = currentRotationX * Math.PI / 180;
+            camera.rotation.y = currentRotationY * Math.PI / 180;
+            camera.rotation.z = 0;
+            
+            const now = Date.now();
+            updateEnemies(now);
+            renderer.render(scene, camera);
+        }
+        
+        // ------------------- INICIALIZAR JUEGO -------------------
         async function initializeGame() {
             startBtn.textContent = "⟡ LINKING ⟡";
             startBtn.disabled = true;
             
-            // request camera
             await startCamera();
-            
-            // init Three & game world
             initThree();
-            initEnemies(6);
+            initEnemies(5);
             
-            // start animation loop
             gameActive = true;
-            function animate() {
-                if(!gameActive) return;
-                requestAnimationFrame(animate);
-                const now = Date.now();
-                updateEnemyGlitches(now);
-                renderer.render(scene, camera);
+            lastSpeedIncrease = Date.now();
+            approachSpeed = 0.008;
+            speedMultiplier = 1.0;
+            
+            // request gyro permission for iOS
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                try {
+                    await DeviceOrientationEvent.requestPermission();
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    gyroEnabled = true;
+                    gyroStatus.textContent = '🎯 GYRO: ACTIVE';
+                } catch(e) {
+                    gyroStatus.textContent = '⚠️ GYRO: MANUAL ONLY';
+                }
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation);
+                gyroEnabled = true;
+                gyroStatus.textContent = '🎯 GYRO: ACTIVE';
             }
+            
             animate();
             
-            // attach event listeners
-            window.addEventListener('resize', onWindowResize);
-            document.addEventListener('click', (e) => {
-                if(!gameActive) return;
-                handleShoot(e);
+            window.addEventListener('resize', () => {
+                if(camera && renderer) {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                }
             });
-            document.addEventListener('touchstart', (e) => {
-                if(!gameActive) return;
-                e.preventDefault();
-                handleShoot(e);
-            }, { passive: false });
             
-            // keyboard R reload
+            document.addEventListener('click', handleShoot);
+            document.addEventListener('touchstart', handleShoot, { passive: false });
+            
+            // Long press calibration
+            let pressTimer;
+            document.addEventListener('touchstart', (e) => {
+                if(e.touches.length === 2) {
+                    pressTimer = setTimeout(() => {
+                        calibrateGyro();
+                    }, 800);
+                }
+            });
+            document.addEventListener('touchend', () => {
+                clearTimeout(pressTimer);
+            });
+            
             window.addEventListener('keydown', (e) => {
                 if(!gameActive) return;
                 if(e.key === 'r' || e.key === 'R') {
                     e.preventDefault();
                     reloadGun();
                 }
+                if(e.key === 'c' || e.key === 'C') {
+                    calibrateGyro();
+                }
             });
             
-            // hide start overlay after small delay
+            updateUI();
             startOverlay.style.opacity = '0';
             setTimeout(() => {
                 startOverlay.style.display = 'none';
             }, 500);
-            
-            updateUI();
             startBtn.disabled = false;
         }
         
-        function onWindowResize() {
-            if(camera && renderer) {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            }
-        }
-        
-        // handle start button
         startBtn.addEventListener('click', () => {
             initializeGame().catch(err => {
-                console.error("Init error", err);
-                startBtn.textContent = "⚠️ RETRY LINK";
+                console.error(err);
+                startBtn.textContent = "⚠️ RETRY";
                 startBtn.disabled = false;
-                alert("Camera unavailable. Game will start with synthetic background.");
-                initializeGame(); // second attempt with fallback
             });
         });
         
-        // preload nothing, but set body ready
-        console.log("NEO·PROXY COMBAT // READY");
+        restartBtn.addEventListener('click', () => {
+            restartGame();
+        });
+        
+        calibrateBtn.addEventListener('click', () => {
+            calibrateGyro();
+        });
     })();
 </script>
 </body>
