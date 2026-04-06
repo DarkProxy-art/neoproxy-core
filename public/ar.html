@@ -101,6 +101,8 @@
         let ammo = 12;
         let isReloading = false;
         let gameActive = false;
+        let health = 100; // Vida del jugador
+        const MAX_HEALTH = 100;
         
         // ========== TOUCH CONTROLS (FALLBACK) ==========
         let useTouchControls = false;
@@ -240,32 +242,31 @@
             console.log('Gyro calibrate');
         }
         
-        // ========== CREAR ENEMIGOS FIJOS EN EL ESPACIO ==========
+        // ========== CREAR ENEMIGOS (ESFERAS QUE SE ACERCAN) ==========
         function createEnemy(x, y, z) {
-            const geometries = [
-                new THREE.TorusKnotGeometry(0.45, 0.13, 120, 12, 3, 4),
-                new THREE.IcosahedronGeometry(0.42, 0),
-                new THREE.DodecahedronGeometry(0.4, 0)
-            ];
-            const geometry = geometries[Math.floor(Math.random() * geometries.length)];
+            // Solo esferas
+            const geometry = new THREE.SphereGeometry(0.4, 32, 32);
             const material = new THREE.MeshStandardMaterial({
                 color: 0xdd2222,
                 emissive: 0x551111,
                 emissiveIntensity: 0.5,
                 metalness: 0.7,
-                roughness: 0.3
+                roughness: 0.3,
+                wireframe: false
             });
             
             const enemy = new THREE.Mesh(geometry, material);
             enemy.position.set(x, y, z);
             
+            // Datos para movimiento hacia cámara
             enemy.userData = {
-                rotSpeedX: 0.008 + Math.random() * 0.01,
-                rotSpeedY: 0.01 + Math.random() * 0.01,
-                scaleOrig: 0.8 + Math.random() * 0.5,
-                glitchTime: Date.now(),
-                glitchInterval: 1500 + Math.random() * 2000,
-                pulsePhase: Math.random() * Math.PI * 2
+                speed: 0.02 + Math.random() * 0.03, // Velocidad de acercamiento
+                rotSpeedX: 0.005 + Math.random() * 0.008,
+                rotSpeedY: 0.008 + Math.random() * 0.01,
+                scaleOrig: 0.8 + Math.random() * 0.4,
+                pulsePhase: Math.random() * Math.PI * 2,
+                damage: 10, // Daño al chocar
+                hitPlayer: false // Evitar daño múltiple
             };
             
             enemy.scale.setScalar(enemy.userData.scaleOrig);
@@ -276,24 +277,28 @@
             enemies.forEach(e => scene.remove(e));
             enemies = [];
             
-            // Enemigos en posiciones fijas en 360 grados alrededor del jugador
+            // Enemigos lejos de la cámara (distancia 8-12 unidades)
             const positions = [
-                { x: 0, y: 0, z: -2 },
-                { x: 2, y: 0, z: -2 },
-                { x: -2, y: 0, z: -2 },
-                { x: 0, y: 0, z: 2 },
-                { x: 2, y: 0, z: 2 },
-                { x: -2, y: 0, z: 2 },
-                { x: 2, y: 0, z: 0 },
-                { x: -2, y: 0, z: 0 },
-                { x: 0, y: 2, z: -2 },
-                { x: 0, y: -1, z: -2 }
+                { x: 0, y: 0, z: -10 },
+                { x: 5, y: 2, z: -8 },
+                { x: -5, y: -1, z: -9 },
+                { x: 3, y: 1, z: -11 },
+                { x: -4, y: 0, z: -10 },
+                { x: 0, y: 3, z: -9 },
+                { x: 6, y: -2, z: -8 },
+                { x: -6, y: 1, z: -11 },
+                { x: 2, y: -2, z: -12 },
+                { x: -3, y: 2, z: -10 }
             ];
             
             const numEnemies = 10;
             for (let i = 0; i < numEnemies; i++) {
                 const pos = positions[i % positions.length];
-                const enemy = createEnemy(pos.x, pos.y + (Math.random() - 0.5) * 1.2, pos.z);
+                // Añadir variación aleatoria
+                const x = pos.x + (Math.random() - 0.5) * 2;
+                const y = pos.y + (Math.random() - 0.5) * 1.5;
+                const z = pos.z + (Math.random() - 0.5) * 2;
+                const enemy = createEnemy(x, y, z);
                 scene.add(enemy);
                 enemies.push(enemy);
             }
@@ -302,11 +307,12 @@
         }
         
         function respawnEnemy() {
+            // Spawn lejos en dirección aleatoria
             const angle = Math.random() * Math.PI * 2;
-            const radius = 3 + Math.random() * 2;
-            const x = Math.cos(angle) * radius;
-            const z = Math.sin(angle) * radius;
-            const y = (Math.random() - 0.5) * 2.5;
+            const distance = 10 + Math.random() * 3;
+            const x = Math.cos(angle) * distance;
+            const z = Math.sin(angle) * distance;
+            const y = (Math.random() - 0.5) * 3;
             
             const enemy = createEnemy(x, y, z);
             scene.add(enemy);
@@ -387,6 +393,24 @@
             ammoEl.textContent = `AMMO: ${ammo}/12`;
         }
         
+        function updateHealthUI() {
+            const healthPercent = Math.max(0, (health / MAX_HEALTH) * 100);
+            let healthColor = '#88ff88';
+            if (health < 70) healthColor = '#ffff88';
+            if (health < 40) healthColor = '#ff8844';
+            if (health < 20) healthColor = '#ff2222';
+            
+            // Actualizar el elemento de vida si existe, o crearlo
+            let healthEl = document.getElementById('health-display');
+            if (!healthEl) {
+                healthEl = document.createElement('div');
+                healthEl.id = 'health-display';
+                healthEl.style.cssText = 'position:absolute;top:60px;right:12px;background:rgba(0,0,0,0.7);padding:4px 8px;font-size:10px;z-index:3;border-radius:4px;pointer-events:none;font-family:monospace;';
+                document.body.appendChild(healthEl);
+            }
+            healthEl.innerHTML = `<span style="color:${healthColor}">❤️ ${health}/${MAX_HEALTH} HP</span>`;
+        }
+        
         function gameOver() {
             gameActive = false;
             document.getElementById('final-score').textContent = `SCORE: ${score}`;
@@ -396,7 +420,9 @@
         function restartGame() {
             score = 0;
             ammo = 12;
+            health = MAX_HEALTH; // Resetear vida
             updateUI();
+            updateHealthUI(); // Actualizar display de vida
             
             enemies.forEach(e => scene.remove(e));
             enemies = [];
@@ -409,40 +435,62 @@
             calibrateGyro();
         }
         
-        // ========== ANIMACION ENEMIGOS ==========
+        // ========== ANIMACION ENEMIGOS (SE ACERCAN A CÁMARA) ==========
         function animateEnemies() {
             const now = Date.now();
             
-            for (let enemy of enemies) {
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                
+                // Mover hacia la cámara (posición 0,0,0)
+                const direction = new THREE.Vector3(0, 0, 0).sub(enemy.position).normalize();
+                enemy.position.add(direction.multiplyScalar(enemy.userData.speed));
+                
                 // Rotación constante
                 enemy.rotation.x += enemy.userData.rotSpeedX;
                 enemy.rotation.y += enemy.userData.rotSpeedY;
-                enemy.rotation.z += enemy.userData.rotSpeedY * 0.5;
-                
-                // Efecto glitch
-                if (now - enemy.userData.glitchTime > enemy.userData.glitchInterval) {
-                    const glitchScale = 1.25 + Math.random() * 0.5;
-                    enemy.scale.setScalar(glitchScale);
-                    
-                    if (enemy.material) {
-                        enemy.material.emissiveIntensity = 1.2;
-                        setTimeout(() => {
-                            if (enemy.material) enemy.material.emissiveIntensity = 0.4;
-                        }, 120);
-                    }
-                    
-                    setTimeout(() => {
-                        if (enemy) enemy.scale.setScalar(enemy.userData.scaleOrig);
-                    }, 150);
-                    
-                    enemy.userData.glitchTime = now;
-                    enemy.userData.glitchInterval = 1400 + Math.random() * 2500;
-                }
                 
                 // Pulsación suave
                 if (enemy.material) {
                     const intensity = 0.4 + Math.sin(now * 0.005 + enemy.userData.pulsePhase) * 0.25;
                     enemy.material.emissiveIntensity = intensity;
+                }
+                
+                // DETECCIÓN DE COLISIÓN CON CÁMARA
+                const distanceToCamera = enemy.position.distanceTo(new THREE.Vector3(0, 0, 0));
+                if (distanceToCamera < 1.0 && !enemy.userData.hitPlayer) {
+                    // Colisión! Quitar vida
+                    enemy.userData.hitPlayer = true;
+                    health -= enemy.userData.damage;
+                    showHitFlash(`💥 DAÑO! -${enemy.userData.damage} HP`);
+                    
+                    // Efecto visual de daño
+                    enemy.material.emissive = new THREE.Color(0xffffff);
+                    enemy.material.emissiveIntensity = 2;
+                    
+                    // Destruir enemigo después del daño
+                    setTimeout(() => {
+                        scene.remove(enemy);
+                        enemies.splice(i, 1);
+                        updateEnemiesCount();
+                        respawnEnemy(); // Respawn inmediato
+                    }, 100);
+                    
+                    // Verificar game over
+                    if (health <= 0) {
+                        health = 0;
+                        gameOver();
+                    }
+                    
+                    // Actualizar UI de vida
+                    updateHealthUI();
+                }
+                
+                // Si pasó la cámara (detrás), respawnear lejos
+                if (enemy.position.z > 2 || distanceToCamera > 15) {
+                    scene.remove(enemy);
+                    enemies.splice(i, 1);
+                    respawnEnemy();
                 }
             }
         }
