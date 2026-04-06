@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NEO·PROXY // REALIDAD AUMENTADA</title>
+    <title>NEO·PROXY // BABYLON AR</title>
     <style>
         * {
             margin: 0;
@@ -19,6 +19,26 @@
             position: fixed;
             width: 100%;
             height: 100%;
+            touch-action: none;
+        }
+        #camera-feed {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            filter: brightness(0.85) contrast(1.1) saturate(0.8);
+        }
+        #renderCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            outline: none;
             touch-action: none;
         }
         /* Capas de post-procesado */
@@ -55,20 +75,6 @@
             background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
             pointer-events: none;
             z-index: 22;
-        }
-        #camera-feed {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            object-fit: cover;
-            z-index: 1;
-            filter: brightness(0.9) contrast(1.1) saturate(0.8);
-        }
-        #game-canvas {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 2;
         }
         /* HUD */
         .hud {
@@ -138,56 +144,6 @@
         .ammo-pip.empty {
             background: #1a3322;
             box-shadow: none;
-        }
-        .wave-alert {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8);
-            border: 2px solid #ff6688;
-            color: #ff6688;
-            padding: 12px 24px;
-            font-size: 24px;
-            font-weight: bold;
-            letter-spacing: 4px;
-            z-index: 35;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            white-space: nowrap;
-        }
-        .wave-alert.show {
-            opacity: 1;
-            animation: wavePulse 1s;
-        }
-        @keyframes wavePulse {
-            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
-            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
-        }
-        .sys-msg {
-            position: absolute;
-            bottom: 80px;
-            left: 16px;
-            background: rgba(0,0,0,0.6);
-            color: #ff8899;
-            padding: 4px 10px;
-            font-size: 9px;
-            z-index: 30;
-            border-left: 2px solid #ff6688;
-            pointer-events: none;
-        }
-        .gyro-status {
-            position: absolute;
-            top: 70px;
-            right: 16px;
-            background: rgba(0,15,8,0.7);
-            padding: 4px 10px;
-            font-size: 9px;
-            color: #88ff99;
-            z-index: 30;
-            border: 1px solid rgba(136,255,153,0.4);
         }
         .crosshair {
             position: absolute;
@@ -259,7 +215,56 @@
         @keyframes muzzleAnim {
             to { opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
         }
-        /* Pantallas */
+        .wave-alert {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            border: 2px solid #ff6688;
+            color: #ff6688;
+            padding: 12px 24px;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            z-index: 35;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .wave-alert.show {
+            opacity: 1;
+            animation: wavePulse 1s;
+        }
+        @keyframes wavePulse {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+        .gyro-status {
+            position: absolute;
+            top: 70px;
+            right: 16px;
+            background: rgba(0,15,8,0.7);
+            padding: 4px 10px;
+            font-size: 9px;
+            color: #88ff99;
+            z-index: 30;
+            border: 1px solid rgba(136,255,153,0.4);
+        }
+        .sys-msg {
+            position: absolute;
+            bottom: 80px;
+            left: 16px;
+            background: rgba(0,0,0,0.6);
+            color: #ff8899;
+            padding: 4px 10px;
+            font-size: 9px;
+            z-index: 30;
+            border-left: 2px solid #ff6688;
+            pointer-events: none;
+        }
         #start-screen {
             position: fixed;
             top: 0; left: 0;
@@ -318,27 +323,16 @@
             font-family: monospace;
             font-size: 1rem;
         }
-        .indicator {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 28;
-            filter: drop-shadow(0 0 4px currentColor);
-        }
     </style>
 </head>
 <body>
 
 <video id="camera-feed" autoplay playsinline muted></video>
-<canvas id="game-canvas"></canvas>
+<canvas id="renderCanvas"></canvas>
 
 <div class="noise"></div>
 <div class="scanlines"></div>
 <div class="vignette"></div>
-
-<div id="indicators" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:28;"></div>
 
 <div class="hud top-bar">
     <div>NEO·PROXY</div>
@@ -348,8 +342,6 @@
     </div>
     <div id="score">0</div>
 </div>
-
-<div class="wave-alert" id="wave-alert">WAVE 1</div>
 
 <div class="crosshair">
     <svg width="44" height="44" viewBox="0 0 44 44">
@@ -364,7 +356,7 @@
 </div>
 
 <div class="hud bottom-left">
-    <div id="ctrl-hint">GIROSCOPIO: ACTIVO</div>
+    <div id="ctrl-hint">GIROSCOPIO: INICIANDO...</div>
     <div style="font-size:9px;">TOCAR: DISPARAR | DOBLE: CALIBRAR</div>
 </div>
 
@@ -377,10 +369,11 @@
 <div class="gyro-status" id="gyro-status">SENSOR: INICIANDO...</div>
 <div class="sys-msg" id="sys-msg">[SYS] CONEXIÓN ESTABLECIDA</div>
 <div id="reload-ind" class="reload-indicator">RECARGANDO...</div>
+<div class="wave-alert" id="wave-alert">WAVE 1</div>
 
 <div id="start-screen">
     <h1>NEO·PROXY</h1>
-    <p style="color:#448844;">REALIDAD AUMENTADA</p>
+    <p style="color:#448844;">BABYLON AR</p>
     <button id="start-btn">CONECTAR</button>
     <p style="color:#336633; margin-top:40px;">permite cámara y sensores</p>
 </div>
@@ -391,661 +384,366 @@
     <button id="restart-btn">REINICIAR</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
 <script>
-(function(){
-    // ---------- DOM ----------
-    const video = document.getElementById('camera-feed');
-    const startScreen = document.getElementById('start-screen');
-    const gameoverScreen = document.getElementById('gameover-screen');
-    const startBtn = document.getElementById('start-btn');
-    const restartBtn = document.getElementById('restart-btn');
-    const scoreEl = document.getElementById('score');
-    const ammoEl = document.getElementById('ammo');
-    const ammoBar = document.getElementById('ammo-bar');
-    const enemyCountEl = document.getElementById('enemy-count');
-    const reloadInd = document.getElementById('reload-ind');
-    const gyroStatus = document.getElementById('gyro-status');
-    const hpFill = document.getElementById('hp-fill');
-    const hpNum = document.getElementById('hp-num');
-    const waveAlert = document.getElementById('wave-alert');
-    const sysMsg = document.getElementById('sys-msg');
-    const ctrlHint = document.getElementById('ctrl-hint');
-    const indicatorsDiv = document.getElementById('indicators');
+    (function(){
+        // ---------- DOM elements ----------
+        const video = document.getElementById('camera-feed');
+        const startScreen = document.getElementById('start-screen');
+        const gameoverScreen = document.getElementById('gameover-screen');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const scoreEl = document.getElementById('score');
+        const ammoEl = document.getElementById('ammo');
+        const ammoBar = document.getElementById('ammo-bar');
+        const enemyCountEl = document.getElementById('enemy-count');
+        const reloadInd = document.getElementById('reload-ind');
+        const gyroStatus = document.getElementById('gyro-status');
+        const hpFill = document.getElementById('hp-fill');
+        const hpNum = document.getElementById('hp-num');
+        const waveAlert = document.getElementById('wave-alert');
+        const ctrlHint = document.getElementById('ctrl-hint');
+        const sysMsg = document.getElementById('sys-msg');
 
-    // ---------- Estado del juego ----------
-    let scene, camera, renderer;
-    let enemies = [];
-    let score = 0, health = 100, ammo = 12;
-    const MAX_AMMO = 12, MAX_HEALTH = 100;
-    let isReloading = false, gameActive = false, canShoot = true;
-    let wave = 0, waveEnemies = 0, waveCooldown = false;
+        // ---------- Game state ----------
+        let scene, camera, engine;
+        let enemies = [];
+        let score = 0, health = 100, ammo = 12;
+        const MAX_AMMO = 12, MAX_HEALTH = 100;
+        let isReloading = false, gameActive = false, canShoot = true;
+        let wave = 0, waveCooldown = false;
+        let lastTapTime = 0;
 
-    // ---------- Rotación de cámara (world-oriented) ----------
-    let currentRotX = 0, currentRotY = 0;
-    let targetRotX = 0, targetRotY = 0;
-    const SMOOTH = 0.1;
-
-    // ---------- Giroscopio ----------
-    let gyroActive = false, gyroAvailable = false;
-    let calibrationAlpha = 0, calibrationBeta = 0;
-    let lastAlpha = 0, lastBeta = 90;
-
-    // ---------- Touch controls ----------
-    let useTouch = false, isDragging = false;
-    let lastTouchX = 0, lastTouchY = 0;
-    const TOUCH_SENS = 0.25;
-
-    // ---------- Partículas y líneas ----------
-    let particleSystem;
-    let particlePositions, particleVelocities;
-    const NUM_PARTICLES = 400;
-    let connectionLines;
-    let linePositions;
-    const MAX_SEGMENTS = 80;
-
-    // ---------- Indicadores direccionales (pool) ----------
-    const indicators = [];
-    const INDICATOR_COLORS = { drone: '#00ffcc', proxy: '#ff3366', ghost: '#cc66ff' };
-
-    function initIndicators() {
-        for (let i = 0; i < 20; i++) {
-            const div = document.createElement('div');
-            div.className = 'indicator';
-            div.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="12,2 22,20 2,20" fill="currentColor" opacity="0.9"/></svg>';
-            div.style.display = 'none';
-            indicatorsDiv.appendChild(div);
-            indicators.push(div);
+        // ---------- Babylon Camera with DeviceOrientation ----------
+        function initBabylon() {
+            const canvas = document.getElementById('renderCanvas');
+            engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: false, stencil: true });
+            scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+            scene.autoClear = true;
+            
+            // Cámara de orientación (giroscopio)
+            camera = new BABYLON.DeviceOrientationCamera("arCamera", new BABYLON.Vector3(0, 0, 0), scene);
+            camera.angularSensibility = 10000;
+            camera.inputs.add(new BABYLON.DeviceOrientationCameraInput());
+            camera.rotation.y = 0;
+            camera.rotation.x = 0;
+            camera.attachControl(canvas, true);
+            
+            // Luces
+            const hemiLight = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+            hemiLight.intensity = 0.6;
+            hemiLight.groundColor = new BABYLON.Color3(0.2, 0.3, 0.2);
+            const dirLight = new BABYLON.DirectionalLight("dir", new BABYLON.Vector3(1, -1, 0.5), scene);
+            dirLight.intensity = 0.8;
+            // Grid de referencia
+            const grid = BABYLON.MeshBuilder.CreateGround("grid", { width: 20, height: 20, subdivisions: 2 }, scene);
+            const gridMat = new BABYLON.StandardMaterial("gridMat", scene);
+            gridMat.wireframe = true;
+            gridMat.emissiveColor = new BABYLON.Color3(0.2, 0.5, 0.2);
+            grid.material = gridMat;
+            grid.position.y = -2;
+            grid.visibility = 0.3;
+            
+            // Partículas ambientales (simple points)
+            const particleCount = 800;
+            const particlePositions = [];
+            for (let i = 0; i < particleCount; i++) {
+                const sphere = BABYLON.MeshBuilder.CreateSphere("p"+i, { diameter: 0.06 }, scene);
+                const r = 4 + Math.random() * 6;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                sphere.position.x = r * Math.sin(phi) * Math.cos(theta);
+                sphere.position.y = r * Math.sin(phi) * Math.sin(theta) * 0.6;
+                sphere.position.z = r * Math.cos(phi);
+                sphere.material = new BABYLON.StandardMaterial("pMat"+i, scene);
+                sphere.material.emissiveColor = new BABYLON.Color3(Math.random()*0.5+0.3, Math.random()*0.8+0.2, Math.random()*0.8+0.2);
+                sphere.material.alpha = 0.5;
+                particlePositions.push(sphere);
+            }
+            // animar partículas (rotación lenta)
+            scene.registerBeforeRender(() => {
+                particlePositions.forEach(p => {
+                    p.rotation.x += 0.005;
+                    p.rotation.y += 0.007;
+                });
+            });
+            
+            return scene;
         }
-    }
 
-    function updateIndicators() {
-        indicators.forEach(i => i.style.display = 'none');
-        let idx = 0;
-        const w = window.innerWidth, h = window.innerHeight;
-        const margin = 40;
-        for (let enemy of enemies) {
-            if (idx >= indicators.length) break;
-            const pos = enemy.position.clone().project(camera);
-            const behind = pos.z > 1;
-            const offX = Math.abs(pos.x) > 1.02;
-            const offY = Math.abs(pos.y) > 1.02;
-            if (!behind && !offX && !offY) continue;
-            // Calcular dirección 2D desde el centro
-            const cx = w/2, cy = h/2;
-            let dx = pos.x * cx + cx - cx;
-            let dy = -pos.y * cy + cy - cy;
-            if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) dx = 1;
-            const angle = Math.atan2(dy, dx);
-            let t = 1;
-            if (Math.abs(Math.cos(angle)) > 0.01) t = Math.min(t, (w/2 - margin) / (Math.abs(Math.cos(angle)) * (w/2)));
-            if (Math.abs(Math.sin(angle)) > 0.01) t = Math.min(t, (h/2 - margin) / (Math.abs(Math.sin(angle)) * (h/2)));
-            t = Math.max(0.3, t);
-            const x = cx + Math.cos(angle) * (w/2 * t);
-            const y = cy + Math.sin(angle) * (h/2 * t);
-            const el = indicators[idx++];
-            el.style.display = 'block';
-            el.style.left = x + 'px';
-            el.style.top = y + 'px';
-            el.style.transform = `translate(-50%,-50%) rotate(${angle + Math.PI/2}rad)`;
-            el.style.color = INDICATOR_COLORS[enemy.userData.type] || '#88ff99';
-        }
-    }
-
-    // ---------- Partículas ambientales ----------
-    function initParticles() {
-        const geom = new THREE.BufferGeometry();
-        particlePositions = new Float32Array(NUM_PARTICLES * 3);
-        particleVelocities = new Float32Array(NUM_PARTICLES * 3);
-        const colors = new Float32Array(NUM_PARTICLES * 3);
-        for (let i = 0; i < NUM_PARTICLES; i++) {
-            const r = 3 + Math.random() * 8;
+        // ---------- Enemies (spheres that move toward origin) ----------
+        function createEnemy() {
+            const radius = 5 + Math.random() * 4;
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
-            particlePositions[i*3] = r * Math.sin(phi) * Math.cos(theta);
-            particlePositions[i*3+1] = r * Math.sin(phi) * Math.sin(theta) * 0.6;
-            particlePositions[i*3+2] = r * Math.cos(phi);
-            particleVelocities[i*3] = (Math.random() - 0.5) * 0.003;
-            particleVelocities[i*3+1] = (Math.random() - 0.5) * 0.002;
-            particleVelocities[i*3+2] = (Math.random() - 0.5) * 0.003;
-            const col = Math.random();
-            if (col < 0.5) { colors[i*3]=0.3; colors[i*3+1]=1; colors[i*3+2]=0.5; }
-            else if (col < 0.8) { colors[i*3]=0; colors[i*3+1]=0.8; colors[i*3+2]=1; }
-            else { colors[i*3]=0.8; colors[i*3+1]=0.3; colors[i*3+2]=1; }
+            const x = radius * Math.sin(phi) * Math.cos(theta);
+            const y = radius * Math.sin(phi) * Math.sin(theta) * 0.7;
+            const z = radius * Math.cos(phi);
+            const sphere = BABYLON.MeshBuilder.CreateSphere("enemy", { diameter: 0.7 }, scene);
+            sphere.position.set(x, y, z);
+            const mat = new BABYLON.StandardMaterial("enemyMat", scene);
+            mat.diffuseColor = new BABYLON.Color3(0.8, 0.2, 0.2);
+            mat.emissiveColor = new BABYLON.Color3(0.5, 0, 0);
+            mat.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+            sphere.material = mat;
+            // wireframe overlay
+            const wireMat = new BABYLON.StandardMaterial("wire", scene);
+            wireMat.emissiveColor = new BABYLON.Color3(1, 0.3, 0.3);
+            wireMat.wireframe = true;
+            const wireSphere = BABYLON.MeshBuilder.CreateSphere("wireEnemy", { diameter: 0.75 }, scene);
+            wireSphere.material = wireMat;
+            wireSphere.parent = sphere;
+            sphere.userData = { speed: 0.025 + Math.random() * 0.02, hp: 1, wire: wireSphere };
+            return sphere;
         }
-        geom.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-        geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        const mat = new THREE.PointsMaterial({ size: 0.06, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false });
-        particleSystem = new THREE.Points(geom, mat);
-        scene.add(particleSystem);
-    }
 
-    function updateParticles() {
-        for (let i = 0; i < NUM_PARTICLES; i++) {
-            particlePositions[i*3] += particleVelocities[i*3];
-            particlePositions[i*3+1] += particleVelocities[i*3+1];
-            particlePositions[i*3+2] += particleVelocities[i*3+2];
-            const d = Math.sqrt(particlePositions[i*3]**2 + particlePositions[i*3+1]**2 + particlePositions[i*3+2]**2);
-            if (d > 12 || d < 2) {
-                particleVelocities[i*3] *= -0.9;
-                particleVelocities[i*3+1] *= -0.9;
-                particleVelocities[i*3+2] *= -0.9;
+        function spawnEnemy() {
+            const enemy = createEnemy();
+            enemies.push(enemy);
+            enemyCountEl.textContent = enemies.length;
+        }
+
+        function startWaveBabylon() {
+            wave++;
+            waveAlert.textContent = `WAVE ${wave}`;
+            waveAlert.classList.add('show');
+            setTimeout(() => waveAlert.classList.remove('show'), 1000);
+            const count = Math.min(6 + Math.floor(wave * 0.8), 15);
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => { if (gameActive) spawnEnemy(); }, i * 300);
             }
         }
-        particleSystem.geometry.attributes.position.needsUpdate = true;
-    }
 
-    // ---------- Líneas de conexión entre enemigos ----------
-    function initConnectionLines() {
-        linePositions = new Float32Array(MAX_SEGMENTS * 6);
-        const geom = new THREE.BufferGeometry();
-        geom.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
-        geom.setDrawRange(0, 0);
-        const mat = new THREE.LineBasicMaterial({ color: 0x88ff99, transparent: true, opacity: 0.2 });
-        connectionLines = new THREE.LineSegments(geom, mat);
-        scene.add(connectionLines);
-    }
-
-    function updateConnectionLines() {
-        let seg = 0;
-        const threshold = 4.5;
-        for (let i = 0; i < enemies.length && seg < MAX_SEGMENTS; i++) {
-            for (let j = i+1; j < enemies.length && seg < MAX_SEGMENTS; j++) {
-                const d = enemies[i].position.distanceTo(enemies[j].position);
-                if (d < threshold) {
-                    const idx = seg * 6;
-                    linePositions[idx] = enemies[i].position.x;
-                    linePositions[idx+1] = enemies[i].position.y;
-                    linePositions[idx+2] = enemies[i].position.z;
-                    linePositions[idx+3] = enemies[j].position.x;
-                    linePositions[idx+4] = enemies[j].position.y;
-                    linePositions[idx+5] = enemies[j].position.z;
-                    seg++;
+        function updateEnemies() {
+            for (let i = 0; i < enemies.length; i++) {
+                const e = enemies[i];
+                const dir = e.position.clone().negate();
+                const dist = dir.length();
+                if (dist > 0.05) dir.normalize();
+                e.position.addInPlace(dir.multiplyScalar(e.userData.speed));
+                // rotación
+                e.rotation.x += 0.03;
+                e.rotation.y += 0.04;
+                // colisión
+                if (dist < 1.2) {
+                    e.dispose();
+                    enemies.splice(i,1);
+                    i--;
+                    takeDamage(15);
+                    continue;
                 }
             }
+            enemyCountEl.textContent = enemies.length;
+            if (enemies.length === 0 && !waveCooldown && gameActive) {
+                waveCooldown = true;
+                sysMsg.textContent = `[SYS] OLEADA ${wave} COMPLETADA`;
+                setTimeout(() => {
+                    if (gameActive) {
+                        waveCooldown = false;
+                        startWaveBabylon();
+                    }
+                }, 2500);
+            }
         }
-        connectionLines.geometry.setDrawRange(0, seg * 2);
-        connectionLines.geometry.attributes.position.needsUpdate = true;
-    }
 
-    // ---------- Fábrica de enemigos (tres tipos) ----------
-    function createEnemy(type, pos) {
-        const group = new THREE.Group();
-        group.position.copy(pos);
-        let hp, speed, color, wireColor;
-        switch(type) {
-            case 'drone':
-                hp = 1; speed = 0.028; color = 0x00aa88; wireColor = 0x00ffcc;
-                const droneBody = new THREE.Mesh(new THREE.OctahedronGeometry(0.32), new THREE.MeshStandardMaterial({ color: 0x113333, emissive: 0x004444, metalness: 0.8 }));
-                group.add(droneBody);
-                const droneWire = new THREE.Mesh(new THREE.OctahedronGeometry(0.36), new THREE.MeshBasicMaterial({ color: wireColor, wireframe: true, transparent: true, opacity: 0.7 }));
-                group.add(droneWire);
-                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.02, 8, 24), new THREE.MeshBasicMaterial({ color: wireColor, transparent: true, opacity: 0.5 }));
-                ring.rotation.x = Math.PI/2;
-                group.add(ring);
-                group.userData = { type, hp, speed, ring, wire: droneWire, phase: Math.random()*Math.PI*2 };
-                break;
-            case 'proxy':
-                hp = 3; speed = 0.014; color = 0x881122; wireColor = 0xff3366;
-                const proxyBody = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5), new THREE.MeshStandardMaterial({ color: 0x1a0808, emissive: 0x331111, metalness: 0.7 }));
-                group.add(proxyBody);
-                const proxyWire = new THREE.Mesh(new THREE.IcosahedronGeometry(0.54), new THREE.MeshBasicMaterial({ color: wireColor, wireframe: true, transparent: true, opacity: 0.6 }));
-                group.add(proxyWire);
-                const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshStandardMaterial({ color: 0xff4466, emissive: 0xff2244, emissiveIntensity: 0.7 }));
-                group.add(core);
-                group.userData = { type, hp, speed, wire: proxyWire, core, phase: Math.random()*Math.PI*2 };
-                break;
-            case 'ghost':
-                hp = 1; speed = 0.022; color = 0x552288; wireColor = 0xcc66ff;
-                const ghostBody = new THREE.Mesh(new THREE.TetrahedronGeometry(0.38), new THREE.MeshStandardMaterial({ color: 0x1a0a2a, emissive: 0x331155, transparent: true, opacity: 0.7 }));
-                group.add(ghostBody);
-                const ghostWire = new THREE.Mesh(new THREE.TetrahedronGeometry(0.44), new THREE.MeshBasicMaterial({ color: wireColor, wireframe: true, transparent: true, opacity: 0.8 }));
-                group.add(ghostWire);
-                const ghostCore = new THREE.Mesh(new THREE.SphereGeometry(0.15, 6, 6), new THREE.MeshBasicMaterial({ color: 0xdd88ff, transparent: true }));
-                group.add(ghostCore);
-                group.userData = { type, hp, speed, wire: ghostWire, core: ghostCore, phase: Math.random()*Math.PI*2, teleportTimer: 0 };
-                break;
+        function takeDamage(amount) {
+            if (!gameActive) return;
+            health = Math.max(0, health - amount);
+            updateHealthUI();
+            const flash = document.createElement('div');
+            flash.className = 'damage-flash';
+            document.body.appendChild(flash);
+            setTimeout(() => flash.remove(), 300);
+            if (navigator.vibrate) navigator.vibrate(80);
+            if (health <= 0) gameOver();
         }
-        return group;
-    }
 
-    function spawnEnemy(type) {
-        const radius = 6 + Math.random() * 3;
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        const pos = new THREE.Vector3(
-            radius * Math.sin(phi) * Math.cos(theta),
-            radius * Math.sin(phi) * Math.sin(theta) * 0.7,
-            radius * Math.cos(phi)
-        );
-        const enemy = createEnemy(type, pos);
-        scene.add(enemy);
-        enemies.push(enemy);
-    }
+        function updateHealthUI() {
+            const percent = (health / MAX_HEALTH) * 100;
+            hpFill.style.width = percent + '%';
+            hpNum.textContent = Math.floor(health);
+            if (health <= 30) hpFill.classList.add('low');
+            else hpFill.classList.remove('low');
+        }
 
-    function startWave() {
-        wave++;
-        waveAlert.textContent = `WAVE ${wave}`;
-        waveAlert.classList.add('show');
-        setTimeout(() => waveAlert.classList.remove('show'), 1000);
-        const numDrones = Math.min(4 + wave, 12);
-        const numProxies = Math.min(Math.floor(wave / 2), 5);
-        const numGhosts = Math.min(Math.floor((wave - 1) / 2), 4);
-        waveEnemies = numDrones + numProxies + numGhosts;
-        let delay = 0;
-        for (let i = 0; i < numDrones; i++) {
-            setTimeout(() => { if (gameActive) spawnEnemy('drone'); }, delay);
-            delay += 250 + Math.random() * 300;
-        }
-        for (let i = 0; i < numProxies; i++) {
-            setTimeout(() => { if (gameActive) spawnEnemy('proxy'); }, delay);
-            delay += 500 + Math.random() * 400;
-        }
-        for (let i = 0; i < numGhosts; i++) {
-            setTimeout(() => { if (gameActive) spawnEnemy('ghost'); }, delay);
-            delay += 400 + Math.random() * 400;
-        }
-    }
-
-    function updateEnemies() {
-        const now = performance.now() / 1000;
-        for (let i = 0; i < enemies.length; i++) {
-            const e = enemies[i];
-            const ud = e.userData;
-            // Movimiento hacia el origen (cámara)
-            const dir = e.position.clone().negate();
-            const dist = dir.length();
-            if (dist > 0.05) dir.normalize();
-            e.position.add(dir.multiplyScalar(ud.speed));
-            // Animaciones
-            const pulse = 1 + Math.sin(now * 4 + ud.phase) * 0.08;
-            e.scale.setScalar(pulse);
-            if (ud.wire) {
-                ud.wire.rotation.x += 0.02;
-                ud.wire.rotation.y += 0.03;
-            }
-            if (ud.core) {
-                ud.core.rotation.x += 0.04;
-                ud.core.rotation.y += 0.05;
-            }
-            if (ud.ring) {
-                ud.ring.rotation.z += 0.05;
-            }
-            // Teletransporte de ghost
-            if (ud.type === 'ghost' && dist > 2 && now > ud.teleportTimer) {
-                ud.teleportTimer = now + 2 + Math.random() * 3;
-                const newDir = e.position.clone().negate().normalize();
-                e.position.add(newDir.multiplyScalar(1.2));
-                e.scale.setScalar(0.5);
-            }
-            // Colisión con jugador (distancia < 1.2)
-            if (dist < 1.2) {
-                scene.remove(e);
-                enemies.splice(i,1);
-                i--;
-                const dmg = ud.type === 'proxy' ? 25 : (ud.type === 'ghost' ? 15 : 10);
-                takeDamage(dmg);
-                continue;
-            }
-        }
-        enemyCountEl.textContent = enemies.length;
-        if (enemies.length === 0 && !waveCooldown && gameActive) {
-            waveCooldown = true;
-            sysMsg.textContent = `[SYS] OLEADA ${wave} COMPLETADA`;
-            setTimeout(() => {
-                if (gameActive) {
-                    waveCooldown = false;
-                    startWave();
+        // ---------- Shooting ----------
+        function shoot() {
+            if (!gameActive || isReloading || !canShoot) return;
+            if (ammo <= 0) { reload(); return; }
+            canShoot = false;
+            setTimeout(() => canShoot = true, 150);
+            // muzzle flash
+            const muzzle = document.createElement('div');
+            muzzle.className = 'muzzle';
+            document.body.appendChild(muzzle);
+            setTimeout(() => muzzle.remove(), 100);
+            // Raycast desde la cámara
+            const ray = new BABYLON.Ray(camera.position, camera.getForwardRay().direction);
+            let hitEnemy = null;
+            let hitDistance = Infinity;
+            for (let enemy of enemies) {
+                const boundingSphere = enemy.getBoundingInfo().boundingSphere;
+                const centerWorld = enemy.getAbsolutePosition();
+                const sphere = new BABYLON.BoundingSphere(centerWorld, boundingSphere.radiusWorld);
+                const distance = ray.intersectsSphere(sphere);
+                if (distance && distance < hitDistance) {
+                    hitDistance = distance;
+                    hitEnemy = enemy;
                 }
-            }, 2500);
-        }
-    }
-
-    // ---------- Daño y vida ----------
-    function takeDamage(amount) {
-        if (!gameActive) return;
-        health = Math.max(0, health - amount);
-        updateHealthUI();
-        // Efectos visuales
-        const flash = document.createElement('div');
-        flash.className = 'damage-flash';
-        document.body.appendChild(flash);
-        setTimeout(() => flash.remove(), 300);
-        // Audio simulado
-        if (navigator.vibrate) navigator.vibrate(80);
-        if (health <= 0) gameOver();
-    }
-
-    function updateHealthUI() {
-        const percent = (health / MAX_HEALTH) * 100;
-        hpFill.style.width = percent + '%';
-        hpNum.textContent = Math.floor(health);
-        if (health <= 30) hpFill.classList.add('low');
-        else hpFill.classList.remove('low');
-    }
-
-    // ---------- Disparo ----------
-    function shoot(e) {
-        if (!gameActive || isReloading || !canShoot) return;
-        if (e) e.preventDefault();
-        if (ammo <= 0) { reload(); return; }
-        canShoot = false;
-        setTimeout(() => canShoot = true, 120);
-        // Efecto visual de disparo
-        const muzzle = document.createElement('div');
-        muzzle.className = 'muzzle';
-        document.body.appendChild(muzzle);
-        setTimeout(() => muzzle.remove(), 100);
-        // Raycast desde el centro de la cámara
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
-        const hits = raycaster.intersectObjects(enemies, true);
-        if (hits.length > 0) {
-            let hitObj = hits[0].object;
-            let enemyGroup = hitObj;
-            while (enemyGroup.parent && !enemies.includes(enemyGroup)) enemyGroup = enemyGroup.parent;
-            const idx = enemies.indexOf(enemyGroup);
-            if (idx !== -1) {
-                const ud = enemyGroup.userData;
-                ud.hp--;
-                if (ud.hp <= 0) {
-                    scene.remove(enemyGroup);
+            }
+            if (hitEnemy) {
+                const idx = enemies.indexOf(hitEnemy);
+                if (idx !== -1) {
+                    hitEnemy.dispose();
                     enemies.splice(idx,1);
-                    const points = ud.type === 'proxy' ? 300 : (ud.type === 'ghost' ? 200 : 100);
-                    score += points;
+                    score += 100;
                     updateUI();
                     const hitDiv = document.createElement('div');
                     hitDiv.className = 'hit-effect';
-                    hitDiv.textContent = `+${points}`;
-                    if (ud.type === 'proxy') hitDiv.style.color = '#ff6688';
-                    if (ud.type === 'ghost') hitDiv.style.color = '#cc88ff';
+                    hitDiv.textContent = '+100';
                     document.body.appendChild(hitDiv);
                     setTimeout(() => hitDiv.remove(), 800);
                     if (navigator.vibrate) navigator.vibrate(30);
-                } else {
-                    // daño pero no muere
-                    enemyGroup.scale.setScalar(1.4);
-                    setTimeout(() => enemyGroup.scale.setScalar(1), 150);
-                    if (navigator.vibrate) navigator.vibrate(20);
+                }
+            }
+            ammo--;
+            updateUI();
+            if (ammo === 0) reload();
+        }
+
+        function reload() {
+            if (isReloading) return;
+            isReloading = true;
+            reloadInd.style.display = 'flex';
+            setTimeout(() => {
+                ammo = MAX_AMMO;
+                isReloading = false;
+                reloadInd.style.display = 'none';
+                updateUI();
+            }, 1200);
+        }
+
+        function updateUI() {
+            scoreEl.textContent = score;
+            ammoEl.textContent = `${ammo} / ${MAX_AMMO}`;
+            const pips = ammoBar.querySelectorAll('.ammo-pip');
+            pips.forEach((p, i) => p.classList.toggle('empty', i >= ammo));
+        }
+
+        function gameOver() {
+            gameActive = false;
+            document.getElementById('final-score').textContent = `PUNTUACIÓN: ${score}`;
+            gameoverScreen.style.display = 'flex';
+        }
+
+        function restart() {
+            health = MAX_HEALTH;
+            score = 0;
+            ammo = MAX_AMMO;
+            wave = 0;
+            waveCooldown = false;
+            enemies.forEach(e => e.dispose());
+            enemies = [];
+            updateHealthUI();
+            updateUI();
+            gameoverScreen.style.display = 'none';
+            gameActive = true;
+            startWaveBabylon();
+        }
+
+        // ---------- Calibración de cámara (opcional) ----------
+        function calibrateCamera() {
+            if (camera) {
+                camera.rotation.y = 0;
+                camera.rotation.x = 0;
+                gyroStatus.textContent = 'CALIBRADO';
+                setTimeout(() => {
+                    if (gameActive) gyroStatus.textContent = 'SENSOR: ACTIVO';
+                }, 1000);
+            }
+        }
+
+        // ---------- Inicializar cámara del dispositivo ----------
+        async function initCameraFeed() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
+                video.srcObject = stream;
+                return true;
+            } catch(e) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = stream;
+                    return true;
+                } catch(e2) {
+                    video.style.display = 'none';
+                    return false;
                 }
             }
         }
-        ammo--;
-        updateUI();
-        if (ammo === 0) reload();
-    }
 
-    function reload() {
-        if (isReloading) return;
-        isReloading = true;
-        reloadInd.style.display = 'flex';
-        setTimeout(() => {
-            ammo = MAX_AMMO;
-            isReloading = false;
-            reloadInd.style.display = 'none';
+        // ---------- Eventos de entrada ----------
+        function attachEvents() {
+            const canvas = document.getElementById('renderCanvas');
+            canvas.addEventListener('touchstart', (e) => {
+                const now = Date.now();
+                if (now - lastTapTime < 250) {
+                    calibrateCamera();
+                    e.preventDefault();
+                } else {
+                    shoot();
+                }
+                lastTapTime = now;
+            });
+            canvas.addEventListener('click', (e) => {
+                if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
+                shoot();
+            });
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'r' || e.key === 'R') reload();
+                if (e.key === 'c' || e.key === 'C') calibrateCamera();
+                if (e.key === ' ') shoot();
+            });
+        }
+
+        // ---------- Inicialización completa ----------
+        async function init() {
+            startBtn.textContent = 'CONECTANDO...';
+            startBtn.disabled = true;
+            await initCameraFeed();
+            initBabylon();
+            attachEvents();
+            // Crear barra de munición
+            ammoBar.innerHTML = '';
+            for (let i = 0; i < MAX_AMMO; i++) {
+                const pip = document.createElement('div');
+                pip.className = 'ammo-pip';
+                ammoBar.appendChild(pip);
+            }
             updateUI();
-        }, 1200);
-    }
-
-    function updateUI() {
-        scoreEl.textContent = score;
-        ammoEl.textContent = `${ammo} / ${MAX_AMMO}`;
-        const pips = ammoBar.querySelectorAll('.ammo-pip');
-        pips.forEach((p, i) => p.classList.toggle('empty', i >= ammo));
-    }
-
-    function gameOver() {
-        gameActive = false;
-        document.getElementById('final-score').textContent = `PUNTUACIÓN: ${score}`;
-        gameoverScreen.style.display = 'flex';
-    }
-
-    function restart() {
-        health = MAX_HEALTH;
-        score = 0;
-        ammo = MAX_AMMO;
-        wave = 0;
-        waveCooldown = false;
-        enemies.forEach(e => scene.remove(e));
-        enemies = [];
-        updateHealthUI();
-        updateUI();
-        gameoverScreen.style.display = 'none';
-        gameActive = true;
-        startWave();
-    }
-
-    // ---------- Giroscopio ----------
-    function handleOrientation(e) {
-        if (!gameActive) return;
-        let alpha = e.alpha || 0;
-        let beta = e.beta || 90;
-        lastAlpha = alpha;
-        lastBeta = beta;
-        if (!gyroActive) return;
-        let yaw = alpha - calibrationAlpha;
-        let pitch = (beta - 90) - calibrationBeta;
-        if (yaw > 180) yaw -= 360;
-        if (yaw < -180) yaw += 360;
-        targetRotY = -yaw;
-        targetRotX = Math.min(70, Math.max(-70, pitch));
-        if (!gyroAvailable && (Math.abs(alpha) > 0.1 || Math.abs(beta-90) > 0.1)) {
-            gyroAvailable = true;
+            updateHealthUI();
+            // Iniciar juego
+            startScreen.style.display = 'none';
+            gameActive = true;
+            startWaveBabylon();
+            // Loop de render
+            engine.runRenderLoop(() => {
+                if (scene && gameActive) {
+                    updateEnemies();
+                    scene.render();
+                } else if (scene) {
+                    scene.render();
+                }
+            });
+            window.addEventListener('resize', () => engine.resize());
             gyroStatus.textContent = 'SENSOR: ACTIVO';
             ctrlHint.textContent = 'GIROSCOPIO: ACTIVO';
         }
-    }
 
-    async function requestGyro() {
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            try {
-                const response = await DeviceOrientationEvent.requestPermission();
-                if (response === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientation);
-                    gyroActive = true;
-                    return true;
-                }
-            } catch(e) {}
-            return false;
-        } else {
-            window.addEventListener('deviceorientation', handleOrientation);
-            gyroActive = true;
-            return true;
-        }
-    }
-
-    function calibrate() {
-        calibrationAlpha = lastAlpha;
-        calibrationBeta = lastBeta - 90;
-        targetRotX = 0;
-        targetRotY = 0;
-        gyroStatus.textContent = 'CALIBRADO';
-        setTimeout(() => {
-            if (gameActive) gyroStatus.textContent = useTouch ? 'INPUT: TOUCH' : 'SENSOR: ACTIVO';
-        }, 1000);
-    }
-
-    // ---------- Touch fallback ----------
-    function initTouchControls() {
-        const canvas = document.getElementById('game-canvas');
-        canvas.addEventListener('touchstart', e => {
-            if (!gameActive || !useTouch) return;
-            isDragging = true;
-            lastTouchX = e.touches[0].clientX;
-            lastTouchY = e.touches[0].clientY;
-            gyroActive = false;
-        }, { passive: true });
-        canvas.addEventListener('touchmove', e => {
-            if (!gameActive || !useTouch || !isDragging) return;
-            e.preventDefault();
-            const dx = e.touches[0].clientX - lastTouchX;
-            const dy = e.touches[0].clientY - lastTouchY;
-            targetRotY += dx * TOUCH_SENS;
-            targetRotX += dy * TOUCH_SENS;
-            targetRotX = Math.min(70, Math.max(-70, targetRotX));
-            lastTouchX = e.touches[0].clientX;
-            lastTouchY = e.touches[0].clientY;
-        }, { passive: false });
-        canvas.addEventListener('touchend', () => {
-            isDragging = false;
-            if (gyroAvailable) gyroActive = true;
-        });
-        // Mouse
-        let mouseDown = false;
-        canvas.addEventListener('mousedown', e => {
-            if (!gameActive || !useTouch) return;
-            mouseDown = true;
-            lastTouchX = e.clientX;
-            lastTouchY = e.clientY;
-            gyroActive = false;
-        });
-        canvas.addEventListener('mousemove', e => {
-            if (!gameActive || !useTouch || !mouseDown) return;
-            const dx = e.clientX - lastTouchX;
-            const dy = e.clientY - lastTouchY;
-            targetRotY += dx * TOUCH_SENS;
-            targetRotX += dy * TOUCH_SENS;
-            targetRotX = Math.min(70, Math.max(-70, targetRotX));
-            lastTouchX = e.clientX;
-            lastTouchY = e.clientY;
-        });
-        canvas.addEventListener('mouseup', () => { mouseDown = false; if (gyroAvailable) gyroActive = true; });
-    }
-
-    // ---------- Three.js setup ----------
-    function initThree() {
-        scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 0, 0);
-        renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), alpha: true, antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setClearColor(0x000000, 0);
-        // Luces
-        const ambient = new THREE.AmbientLight(0x224422, 0.7);
-        scene.add(ambient);
-        const dirLight = new THREE.DirectionalLight(0x88ffaa, 0.6);
-        dirLight.position.set(2, 3, 4);
-        scene.add(dirLight);
-        const fillLight = new THREE.PointLight(0x88ff99, 0.3);
-        fillLight.position.set(0, 1, 3);
-        scene.add(fillLight);
-        // Grid de referencia
-        const grid = new THREE.GridHelper(18, 24, 0x44aa66, 0x224433);
-        grid.position.y = -2;
-        grid.material.transparent = true;
-        grid.material.opacity = 0.15;
-        scene.add(grid);
-        initParticles();
-        initConnectionLines();
-    }
-
-    async function initCamera() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
-            video.srcObject = stream;
-            return true;
-        } catch(e) {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-                return true;
-            } catch(e2) {
-                video.style.display = 'none';
-                return false;
-            }
-        }
-    }
-
-    // ---------- Inicialización principal ----------
-    async function init() {
-        startBtn.textContent = 'CONECTANDO...';
-        startBtn.disabled = true;
-        await initCamera();
-        initThree();
-        initAmmoBar();
-        initIndicators();
-
-        const gyroEnabled = await requestGyro();
-        if (!gyroEnabled) {
-            useTouch = true;
-            initTouchControls();
-            gyroStatus.textContent = 'INPUT: TOUCH';
-            ctrlHint.textContent = 'ARRASTRAR: GIRAR | TOCAR: DISPARAR';
-        } else {
-            // también activamos touch como respaldo
-            useTouch = true;
-            initTouchControls();
-            ctrlHint.textContent = 'GIRO + TOQUE ACTIVOS';
-        }
-
-        // Eventos de disparo y calibración
-        let lastTap = 0;
-        document.addEventListener('touchend', e => {
-            if (!gameActive) return;
-            const now = Date.now();
-            if (now - lastTap < 250) {
-                calibrate();
-            } else if (!isDragging) {
-                shoot(e);
-            }
-            lastTap = now;
-        });
-        document.addEventListener('click', e => {
-            if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
-            shoot(e);
-        });
-        window.addEventListener('keydown', e => {
-            if (e.key === 'r' || e.key === 'R') reload();
-            if (e.key === 'c' || e.key === 'C') calibrate();
-            if (e.key === ' ') shoot(e);
-        });
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        startScreen.style.display = 'none';
-        gameActive = true;
-        updateHealthUI();
-        startWave();
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if (!gameActive) {
-                if (renderer) renderer.render(scene, camera);
-                return;
-            }
-            // Suavizar rotación de cámara
-            currentRotX += (targetRotX - currentRotX) * SMOOTH;
-            currentRotY += (targetRotY - currentRotY) * SMOOTH;
-            camera.rotation.order = 'YXZ';
-            camera.rotation.x = currentRotX * Math.PI / 180;
-            camera.rotation.y = currentRotY * Math.PI / 180;
-            camera.rotation.z = 0;
-            updateEnemies();
-            updateParticles();
-            updateConnectionLines();
-            updateIndicators();
-            renderer.render(scene, camera);
-        }
-        animate();
-    }
-
-    function initAmmoBar() {
-        ammoBar.innerHTML = '';
-        for (let i = 0; i < MAX_AMMO; i++) {
-            const pip = document.createElement('div');
-            pip.className = 'ammo-pip';
-            ammoBar.appendChild(pip);
-        }
-    }
-
-    startBtn.addEventListener('click', init);
-    restartBtn.addEventListener('click', restart);
-    initAmmoBar();
-})();
+        startBtn.addEventListener('click', init);
+        restartBtn.addEventListener('click', restart);
+    })();
 </script>
 </body>
 </html>
