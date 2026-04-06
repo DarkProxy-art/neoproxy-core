@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NEO·PROXY // BABYLON AR</title>
+    <title>NEO·PROXY // AR ULTIMATE</title>
     <style>
         * {
             margin: 0;
@@ -41,6 +41,7 @@
             outline: none;
             touch-action: none;
         }
+        /* Post-processing layers */
         .noise {
             position: fixed;
             top: 0; left: 0;
@@ -75,6 +76,7 @@
             pointer-events: none;
             z-index: 22;
         }
+        /* HUD */
         .hud {
             position: absolute;
             z-index: 30;
@@ -371,7 +373,7 @@
 
 <div id="start-screen">
     <h1>NEO·PROXY</h1>
-    <p style="color:#448844;">BABYLON AR</p>
+    <p style="color:#448844;">AR ULTIMATE</p>
     <button id="start-btn">CONECTAR</button>
     <p style="color:#336633; margin-top:40px;">permite cámara y sensores</p>
 </div>
@@ -412,8 +414,35 @@
         let wave = 0, waveCooldown = false;
         let lastTapTime = 0;
         let useTouchFallback = false;
-        let touchDeltaX = 0, touchDeltaY = 0;
-        let isDragging = false;
+        let cameraRotation = { y: 0, x: 0 };
+
+        // ---------- Audio (Web Audio API) ----------
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        function playTone(freq, dur, type, vol, freqEnd) {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type || 'sawtooth';
+            osc.frequency.setValueAtTime(freq, now);
+            if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, now + dur);
+            gain.gain.setValueAtTime(vol || 0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(now + dur);
+        }
+        function sndShoot() { playTone(900, 0.08, 'sawtooth', 0.12, 200); playTone(1200, 0.05, 'square', 0.06, 400); }
+        function sndHit() { playTone(300, 0.15, 'sine', 0.15, 80); playTone(600, 0.1, 'square', 0.05, 100); }
+        function sndDamage() { playTone(80, 0.3, 'sawtooth', 0.2, 40); playTone(150, 0.2, 'square', 0.1, 30); }
+        function sndReload() { setTimeout(()=>playTone(500,0.06,'square',0.08),0); setTimeout(()=>playTone(600,0.06,'square',0.08),120); setTimeout(()=>playTone(800,0.1,'square',0.1),240); }
+        function sndWave() { playTone(200,0.4,'sine',0.12,400); setTimeout(()=>playTone(300,0.3,'sine',0.1,600),200); }
 
         // ---------- Ammo bar ----------
         function initAmmoBar() {
@@ -442,6 +471,7 @@
             if (!gameActive) return;
             health = Math.max(0, health - amount);
             updateHealthUI();
+            sndDamage();
             const flash = document.createElement('div');
             flash.className = 'damage-flash';
             document.body.appendChild(flash);
@@ -450,34 +480,51 @@
             if (health <= 0) gameOver();
         }
 
-        // ---------- Enemy ----------
-        function createEnemy() {
+        // ---------- Enemy: low-poly sphere with wireframe and core ----------
+        function createEnemy(pos) {
+            const group = new BABYLON.Mesh("enemyGroup", scene);
+            const body = BABYLON.MeshBuilder.CreateSphere("body", { diameter: 0.65 }, scene);
+            const matBody = new BABYLON.StandardMaterial("bodyMat", scene);
+            matBody.diffuseColor = new BABYLON.Color3(0.8, 0.1, 0.1);
+            matBody.emissiveColor = new BABYLON.Color3(0.4, 0, 0);
+            matBody.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+            body.material = matBody;
+            body.parent = group;
+            
+            const wireMat = new BABYLON.StandardMaterial("wireMat", scene);
+            wireMat.emissiveColor = new BABYLON.Color3(1, 0.2, 0.2);
+            wireMat.wireframe = true;
+            const wire = BABYLON.MeshBuilder.CreateSphere("wire", { diameter: 0.72 }, scene);
+            wire.material = wireMat;
+            wire.parent = group;
+            
+            const core = BABYLON.MeshBuilder.CreateSphere("core", { diameter: 0.25 }, scene);
+            const coreMat = new BABYLON.StandardMaterial("coreMat", scene);
+            coreMat.emissiveColor = new BABYLON.Color3(1, 0.4, 0.4);
+            coreMat.emissiveIntensity = 0.8;
+            core.material = coreMat;
+            core.parent = group;
+            
+            group.position = pos;
+            group.userData = {
+                speed: 0.028 + Math.random() * 0.015,
+                hp: 1,
+                core: core,
+                wire: wire,
+                phase: Math.random() * Math.PI * 2
+            };
+            return group;
+        }
+
+        function spawnEnemy() {
             const radius = 5 + Math.random() * 4;
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
             const x = radius * Math.sin(phi) * Math.cos(theta);
             const y = radius * Math.sin(phi) * Math.sin(theta) * 0.7;
             const z = radius * Math.cos(phi);
-            const sphere = BABYLON.MeshBuilder.CreateSphere("enemy", { diameter: 0.7 }, scene);
-            sphere.position.set(x, y, z);
-            const mat = new BABYLON.StandardMaterial("enemyMat", scene);
-            mat.diffuseColor = new BABYLON.Color3(0.8, 0.2, 0.2);
-            mat.emissiveColor = new BABYLON.Color3(0.5, 0, 0);
-            mat.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
-            sphere.material = mat;
-            // wireframe overlay
-            const wireMat = new BABYLON.StandardMaterial("wire", scene);
-            wireMat.emissiveColor = new BABYLON.Color3(1, 0.3, 0.3);
-            wireMat.wireframe = true;
-            const wireSphere = BABYLON.MeshBuilder.CreateSphere("wireEnemy", { diameter: 0.75 }, scene);
-            wireSphere.material = wireMat;
-            wireSphere.parent = sphere;
-            sphere.userData = { speed: 0.025 + Math.random() * 0.02, hp: 1, wire: wireSphere };
-            return sphere;
-        }
-
-        function spawnEnemy() {
-            const enemy = createEnemy();
+            const pos = new BABYLON.Vector3(x, y, z);
+            const enemy = createEnemy(pos);
             enemies.push(enemy);
             enemyCountEl.textContent = enemies.length;
         }
@@ -486,10 +533,11 @@
             wave++;
             waveAlert.textContent = `WAVE ${wave}`;
             waveAlert.classList.add('show');
+            sndWave();
             setTimeout(() => waveAlert.classList.remove('show'), 1000);
-            const count = Math.min(6 + Math.floor(wave * 0.8), 15);
+            const count = Math.min(5 + Math.floor(wave * 0.7), 14);
             for (let i = 0; i < count; i++) {
-                setTimeout(() => { if (gameActive) spawnEnemy(); }, i * 300);
+                setTimeout(() => { if (gameActive) spawnEnemy(); }, i * 250);
             }
         }
 
@@ -500,8 +548,13 @@
                 const dist = dir.length();
                 if (dist > 0.05) dir.normalize();
                 e.position.addInPlace(dir.multiplyScalar(e.userData.speed));
-                e.rotation.x += 0.03;
-                e.rotation.y += 0.04;
+                // Animate core and wire
+                const time = Date.now() * 0.004;
+                const scale = 1 + Math.sin(time + e.userData.phase) * 0.1;
+                e.userData.core.scaling = new BABYLON.Vector3(scale, scale, scale);
+                e.userData.wire.rotation.y += 0.03;
+                e.userData.wire.rotation.x += 0.02;
+                // Collision with player
                 if (dist < 1.2) {
                     e.dispose();
                     enemies.splice(i,1);
@@ -513,7 +566,7 @@
             enemyCountEl.textContent = enemies.length;
             if (enemies.length === 0 && !waveCooldown && gameActive) {
                 waveCooldown = true;
-                sysMsg.textContent = `[SYS] OLEADA ${wave} COMPLETADA`;
+                sysMsg.textContent = `[SYS] WAVE ${wave} CLEARED`;
                 setTimeout(() => {
                     if (gameActive) {
                         waveCooldown = false;
@@ -529,22 +582,23 @@
             if (ammo <= 0) { reload(); return; }
             canShoot = false;
             setTimeout(() => canShoot = true, 150);
+            sndShoot();
+            // Muzzle flash
             const muzzle = document.createElement('div');
             muzzle.className = 'muzzle';
             document.body.appendChild(muzzle);
             setTimeout(() => muzzle.remove(), 100);
-            
             // Raycast
             const ray = new BABYLON.Ray(camera.position, camera.getForwardRay().direction);
             let hitEnemy = null;
-            let hitDistance = Infinity;
+            let hitDist = Infinity;
             for (let enemy of enemies) {
                 const boundingSphere = enemy.getBoundingInfo().boundingSphere;
                 const centerWorld = enemy.getAbsolutePosition();
                 const sphere = new BABYLON.BoundingSphere(centerWorld, boundingSphere.radiusWorld);
                 const distance = ray.intersectsSphere(sphere);
-                if (distance && distance < hitDistance) {
-                    hitDistance = distance;
+                if (distance && distance < hitDist) {
+                    hitDist = distance;
                     hitEnemy = enemy;
                 }
             }
@@ -552,9 +606,10 @@
                 const idx = enemies.indexOf(hitEnemy);
                 if (idx !== -1) {
                     hitEnemy.dispose();
-                    enemies.splice(idx,1);
+                    enemies.splice(idx, 1);
                     score += 100;
                     updateUI();
+                    sndHit();
                     const hitDiv = document.createElement('div');
                     hitDiv.className = 'hit-effect';
                     hitDiv.textContent = '+100';
@@ -572,6 +627,7 @@
             if (isReloading) return;
             isReloading = true;
             reloadInd.style.display = 'flex';
+            sndReload();
             setTimeout(() => {
                 ammo = MAX_AMMO;
                 isReloading = false;
@@ -607,31 +663,48 @@
             startWave();
         }
 
-        // ---------- Touch fallback (arrastrar) ----------
+        // ---------- Camera and gyroscope ----------
+        function calibrateCamera() {
+            if (camera) {
+                camera.rotation.y = 0;
+                camera.rotation.x = 0;
+                cameraRotation.y = 0;
+                cameraRotation.x = 0;
+                gyroStatus.textContent = 'CALIBRADO';
+                setTimeout(() => {
+                    if (gameActive) gyroStatus.textContent = useTouchFallback ? 'INPUT: TÁCTIL' : 'SENSOR: ACTIVO';
+                }, 1000);
+            }
+        }
+
         function initTouchFallback() {
             useTouchFallback = true;
             ctrlHint.textContent = 'ARRASTRAR: GIRAR | TOCAR: DISPARAR';
             gyroStatus.textContent = 'INPUT: TÁCTIL';
             const canvas = document.getElementById('renderCanvas');
+            let isDragging = false;
+            let lastX = 0, lastY = 0;
             canvas.addEventListener('touchstart', (e) => {
                 if (!gameActive) return;
                 isDragging = true;
+                lastX = e.touches[0].clientX;
+                lastY = e.touches[0].clientY;
                 e.preventDefault();
             });
             canvas.addEventListener('touchmove', (e) => {
                 if (!gameActive || !isDragging) return;
-                const dx = e.touches[0].movementX || 0;
-                const dy = e.touches[0].movementY || 0;
-                touchDeltaX += dx * 0.01;
-                touchDeltaY += dy * 0.01;
+                const dx = e.touches[0].clientX - lastX;
+                const dy = e.touches[0].clientY - lastY;
                 if (camera) {
                     camera.rotation.y += dx * 0.005;
                     camera.rotation.x += dy * 0.005;
-                    camera.rotation.x = Math.min(Math.PI/2.5, Math.max(-Math.PI/2.5, camera.rotation.x));
+                    camera.rotation.x = Math.min(Math.PI/2.2, Math.max(-Math.PI/2.2, camera.rotation.x));
                 }
+                lastX = e.touches[0].clientX;
+                lastY = e.touches[0].clientY;
                 e.preventDefault();
             });
-            canvas.addEventListener('touchend', () => { isDragging = false; });
+            canvas.addEventListener('touchend', () => isDragging = false);
             // Mouse
             let mouseDown = false;
             canvas.addEventListener('mousedown', (e) => { if (gameActive) mouseDown = true; });
@@ -640,92 +713,70 @@
                 if (camera) {
                     camera.rotation.y += e.movementX * 0.005;
                     camera.rotation.x += e.movementY * 0.005;
-                    camera.rotation.x = Math.min(Math.PI/2.5, Math.max(-Math.PI/2.5, camera.rotation.x));
+                    camera.rotation.x = Math.min(Math.PI/2.2, Math.max(-Math.PI/2.2, camera.rotation.x));
                 }
             });
             canvas.addEventListener('mouseup', () => mouseDown = false);
         }
 
-        // ---------- Calibración (reset orientación) ----------
-        function calibrateCamera() {
-            if (camera) {
-                camera.rotation.y = 0;
-                camera.rotation.x = 0;
-                touchDeltaX = 0;
-                touchDeltaY = 0;
-                gyroStatus.textContent = 'CALIBRADO';
-                setTimeout(() => {
-                    if (gameActive) gyroStatus.textContent = useTouchFallback ? 'INPUT: TÁCTIL' : 'SENSOR: ACTIVO';
-                }, 1000);
+        // ---------- Babylon.js scene ----------
+        async function initBabylon() {
+            const canvas = document.getElementById('renderCanvas');
+            engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: false });
+            scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+            scene.autoClear = true;
+            
+            // Camera: DeviceOrientationCamera for true AR
+            try {
+                camera = new BABYLON.DeviceOrientationCamera("arCamera", new BABYLON.Vector3(0, 0, 0), scene);
+                camera.angularSensibility = 5000;
+                camera.inputs.add(new BABYLON.DeviceOrientationCameraInput());
+                camera.attachControl(canvas, true);
+                gyroStatus.textContent = 'SENSOR: ACTIVO';
+                ctrlHint.textContent = 'GIROSCOPIO: ACTIVO';
+                useTouchFallback = false;
+            } catch(e) {
+                console.warn("DeviceOrientationCamera fallback to touch", e);
+                useTouchFallback = true;
+                camera = new BABYLON.UniversalCamera("cam", new BABYLON.Vector3(0, 0, 0), scene);
+                camera.attachControl(canvas, true);
+                initTouchFallback();
+            }
+            
+            // Lighting
+            const hemiLight = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+            hemiLight.intensity = 0.6;
+            const dirLight = new BABYLON.DirectionalLight("dir", new BABYLON.Vector3(1, -1, 0.5), scene);
+            dirLight.intensity = 0.8;
+            
+            // Reference grid
+            const grid = BABYLON.MeshBuilder.CreateGround("grid", { width: 20, height: 20, subdivisions: 2 }, scene);
+            const gridMat = new BABYLON.StandardMaterial("gridMat", scene);
+            gridMat.wireframe = true;
+            gridMat.emissiveColor = new BABYLON.Color3(0.2, 0.5, 0.2);
+            grid.material = gridMat;
+            grid.position.y = -2;
+            grid.visibility = 0.3;
+            
+            // Floating particles (atmosphere)
+            const particleCount = 400;
+            for (let i = 0; i < particleCount; i++) {
+                const sphere = BABYLON.MeshBuilder.CreateSphere("p"+i, { diameter: 0.06 }, scene);
+                const r = 4 + Math.random() * 6;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                sphere.position.x = r * Math.sin(phi) * Math.cos(theta);
+                sphere.position.y = r * Math.sin(phi) * Math.sin(theta) * 0.6;
+                sphere.position.z = r * Math.cos(phi);
+                const mat = new BABYLON.StandardMaterial("pMat"+i, scene);
+                mat.emissiveColor = new BABYLON.Color3(Math.random()*0.5+0.3, Math.random()*0.8+0.2, Math.random()*0.8+0.2);
+                mat.alpha = 0.5;
+                sphere.material = mat;
             }
         }
 
-        // ---------- Babylon con DeviceOrientationCamera ----------
-        async function initBabylon() {
-            return new Promise((resolve, reject) => {
-                try {
-                    const canvas = document.getElementById('renderCanvas');
-                    engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: false });
-                    scene = new BABYLON.Scene(engine);
-                    scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
-                    scene.autoClear = true;
-                    
-                    // Intentar cámara de orientación
-                    try {
-                        camera = new BABYLON.DeviceOrientationCamera("arCamera", new BABYLON.Vector3(0, 0, 0), scene);
-                        camera.angularSensibility = 5000;
-                        camera.inputs.add(new BABYLON.DeviceOrientationCameraInput());
-                        camera.attachControl(canvas, true);
-                        gyroStatus.textContent = 'SENSOR: ACTIVO';
-                        ctrlHint.textContent = 'GIROSCOPIO: ACTIVO';
-                        useTouchFallback = false;
-                    } catch(e) {
-                        console.warn("DeviceOrientationCamera falló, usando touch fallback", e);
-                        useTouchFallback = true;
-                        camera = new BABYLON.UniversalCamera("cam", new BABYLON.Vector3(0, 0, 0), scene);
-                        camera.attachControl(canvas, true);
-                        initTouchFallback();
-                    }
-                    
-                    // Luces
-                    const hemiLight = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
-                    hemiLight.intensity = 0.6;
-                    const dirLight = new BABYLON.DirectionalLight("dir", new BABYLON.Vector3(1, -1, 0.5), scene);
-                    dirLight.intensity = 0.8;
-                    
-                    // Grid de referencia
-                    const grid = BABYLON.MeshBuilder.CreateGround("grid", { width: 20, height: 20, subdivisions: 2 }, scene);
-                    const gridMat = new BABYLON.StandardMaterial("gridMat", scene);
-                    gridMat.wireframe = true;
-                    gridMat.emissiveColor = new BABYLON.Color3(0.2, 0.5, 0.2);
-                    grid.material = gridMat;
-                    grid.position.y = -2;
-                    grid.visibility = 0.3;
-                    
-                    // Partículas ambientales (puntos flotantes)
-                    const particleCount = 400;
-                    for (let i = 0; i < particleCount; i++) {
-                        const sphere = BABYLON.MeshBuilder.CreateSphere("p"+i, { diameter: 0.06 }, scene);
-                        const r = 4 + Math.random() * 6;
-                        const theta = Math.random() * Math.PI * 2;
-                        const phi = Math.acos(2 * Math.random() - 1);
-                        sphere.position.x = r * Math.sin(phi) * Math.cos(theta);
-                        sphere.position.y = r * Math.sin(phi) * Math.sin(theta) * 0.6;
-                        sphere.position.z = r * Math.cos(phi);
-                        const mat = new BABYLON.StandardMaterial("pMat"+i, scene);
-                        mat.emissiveColor = new BABYLON.Color3(Math.random()*0.5+0.3, Math.random()*0.8+0.2, Math.random()*0.8+0.2);
-                        mat.alpha = 0.5;
-                        sphere.material = mat;
-                    }
-                    
-                    resolve(true);
-                } catch(err) {
-                    reject(err);
-                }
-            });
-        }
-
-        // ---------- Cámara física ----------
+        // ---------- Camera feed ----------
         async function initCameraFeed() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
@@ -743,7 +794,7 @@
             }
         }
 
-        // ---------- Eventos de disparo ----------
+        // ---------- Events ----------
         function attachEvents() {
             const canvas = document.getElementById('renderCanvas');
             canvas.addEventListener('touchstart', (e) => {
@@ -767,60 +818,36 @@
             });
         }
 
-        // ---------- Inicialización principal con timeout y manejo de errores ----------
+        // ---------- Main init with timeout and error handling ----------
         async function init() {
             startBtn.textContent = 'CONECTANDO...';
             startBtn.disabled = true;
+            initAudio();
             
-            // Timeout para evitar bloqueo infinito
+            // Timeout to avoid freezing
             const timeout = setTimeout(() => {
-                console.warn("Timeout: forzando inicio sin cámara");
-                startGameWithoutCamera();
+                console.warn("Camera timeout, continuing without feed");
+                video.style.display = 'none';
+                proceed();
             }, 5000);
             
             try {
                 await initCameraFeed();
                 clearTimeout(timeout);
             } catch(err) {
-                console.error("Error cámara:", err);
                 clearTimeout(timeout);
-                // Seguir sin cámara
+                video.style.display = 'none';
             }
             
-            try {
-                await initBabylon();
-            } catch(err) {
-                console.error("Error Babylon:", err);
-                alert("Error al iniciar 3D. Recarga la página.");
-                startBtn.disabled = false;
-                startBtn.textContent = "REINTENTAR";
-                return;
-            }
-            
-            attachEvents();
-            initAmmoBar();
-            updateHealthUI();
-            updateUI();
-            
-            startScreen.style.display = 'none';
-            gameActive = true;
-            startWave();
-            
-            // Loop de render
-            engine.runRenderLoop(() => {
-                if (scene && gameActive) {
-                    updateEnemies();
-                    scene.render();
-                } else if (scene) {
-                    scene.render();
+            async function proceed() {
+                try {
+                    await initBabylon();
+                } catch(err) {
+                    console.error("Babylon init failed", err);
+                    startBtn.disabled = false;
+                    startBtn.textContent = "REINTENTAR";
+                    return;
                 }
-            });
-            window.addEventListener('resize', () => engine.resize());
-        }
-        
-        function startGameWithoutCamera() {
-            video.style.display = 'none';
-            initBabylon().then(() => {
                 attachEvents();
                 initAmmoBar();
                 updateHealthUI();
@@ -832,13 +859,13 @@
                     if (scene && gameActive) {
                         updateEnemies();
                         scene.render();
-                    } else if (scene) scene.render();
+                    } else if (scene) {
+                        scene.render();
+                    }
                 });
-            }).catch(err => {
-                console.error("Babylon sin cámara falló:", err);
-                startBtn.disabled = false;
-                startBtn.textContent = "REINTENTAR";
-            });
+                window.addEventListener('resize', () => engine.resize());
+            }
+            proceed();
         }
         
         startBtn.addEventListener('click', init);
