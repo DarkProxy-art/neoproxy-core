@@ -1,23 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NEO·PROXY // THE WIRED</title>
+    <title>NEO·PROXY // REALIDAD AUMENTADA</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
-        body { 
-            font-family: 'Courier New', monospace; 
-            background: #000; 
-            overflow: hidden; 
-            width: 100vw; 
-            height: 100vh; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            overflow: hidden;
             position: fixed;
+            width: 100%;
+            height: 100%;
             touch-action: none;
         }
-        
-        /* Capas de ruido y scanlines */
-        .noise-layer {
+        /* Capas de post-procesado */
+        .noise {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
@@ -27,184 +32,207 @@
             pointer-events: none;
             z-index: 20;
             mix-blend-mode: overlay;
-            animation: staticShift 0.3s steps(3) infinite;
+            animation: staticShift 0.2s steps(3) infinite;
         }
-        
         @keyframes staticShift {
             0% { transform: translate(0,0); opacity: 0.2; }
             50% { transform: translate(2px, -1px); opacity: 0.25; }
             100% { transform: translate(-1px, 1px); opacity: 0.2; }
         }
-        
         .scanlines {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 2px, transparent 2px, transparent 6px);
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 4px);
             pointer-events: none;
             z-index: 21;
-            opacity: 0.7;
+            opacity: 0.5;
         }
-        
-        /* Filtro de color global (estilo sombrío) */
-        .color-filter {
+        .vignette {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            backdrop-filter: brightness(0.85) contrast(1.2) saturate(0.6) hue-rotate(5deg);
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
             pointer-events: none;
             z-index: 22;
-            mix-blend-mode: multiply;
         }
-        
-        /* Chromatic aberration al recibir daño */
-        .chromatic-aberration {
-            position: fixed;
+        #camera-feed {
+            position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 25;
-            animation: chromaAnim 0.2s ease-out forwards;
-        }
-        
-        @keyframes chromaAnim {
-            0% { background: radial-gradient(circle, rgba(255,0,0,0.2) 0%, rgba(0,255,0,0.2) 30%, rgba(0,0,255,0.2) 70%); transform: scale(1.02); filter: blur(2px); }
-            100% { background: transparent; transform: scale(1); filter: blur(0); }
-        }
-        
-        #camera-feed { 
-            position: absolute; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            object-fit: cover; 
+            object-fit: cover;
             z-index: 1;
-            filter: grayscale(0.3) contrast(1.1);
+            filter: brightness(0.9) contrast(1.1) saturate(0.8);
         }
-        
-        #game-canvas { 
-            position: absolute; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
+        #game-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             z-index: 2;
         }
-        
-        /* HUD con efecto glitch */
-        .hud { 
-            position: absolute; 
-            z-index: 30; 
-            pointer-events: none; 
-            font-family: 'Courier New', monospace; 
+        /* HUD */
+        .hud {
+            position: absolute;
+            z-index: 30;
+            pointer-events: none;
+            font-family: 'Courier New', monospace;
             font-weight: bold;
             color: #88ff99;
-            text-shadow: 0 0 5px #2aff66, 0 0 2px #00aa44;
-            font-size: 14px;
-            letter-spacing: 2px;
-            background: rgba(0,20,10,0.65);
-            backdrop-filter: blur(3px);
-            padding: 8px 16px;
+            text-shadow: 0 0 6px #2aff66;
+            background: rgba(0, 15, 8, 0.8);
+            backdrop-filter: blur(2px);
+            padding: 8px 14px;
             border-left: 2px solid #88ff99;
-            border-bottom: 1px solid #88ff99;
+            font-size: 12px;
         }
-        
-        .glitch-text {
-            animation: textGlitch 0.15s steps(1) infinite;
-            display: inline-block;
-        }
-        
-        @keyframes textGlitch {
-            0%, 100% { transform: translate(0,0); text-shadow: 2px 0 red, -2px 0 blue; }
-            25% { transform: translate(-1px, 1px); text-shadow: -2px 0 red, 2px 0 blue; }
-            50% { transform: translate(1px, -1px); text-shadow: 2px 0 cyan, -2px 0 magenta; }
-            75% { transform: translate(0, 1px); text-shadow: -1px 0 red, 1px 0 blue; }
-        }
-        
-        .top-bar { 
-            top: 18px; left: 18px; right: 18px; 
-            display: flex; 
+        .top-bar {
+            top: 16px; left: 16px; right: 16px;
+            display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 20px;
-            background: rgba(0,20,10,0.8);
-            border: 1px solid #88ff99;
-            border-radius: 0px;
+            background: rgba(0, 15, 8, 0.85);
+            border: 1px solid rgba(136,255,153,0.4);
+            border-left: none;
+            border-right: none;
         }
-        
         .health-container {
             display: flex;
             align-items: center;
             gap: 12px;
         }
-        
-        .health-bar-bg {
-            width: 180px;
-            height: 18px;
-            background: rgba(0,0,0,0.8);
+        .hp-bar {
+            width: 160px;
+            height: 14px;
+            background: #0a1a10;
             border: 1px solid #88ff99;
         }
-        
-        .health-bar-fill {
+        .hp-fill {
             width: 100%;
             height: 100%;
             background: linear-gradient(90deg, #88ff99, #2aff66);
-            transition: width 0.2s ease;
+            transition: width 0.1s;
         }
-        
-        .bottom-left { 
-            bottom: 20px; left: 20px; 
-            font-size: 11px; 
-            padding: 10px 16px;
-            background: rgba(0,20,10,0.8);
-            border-left: 3px solid #88ff99;
+        .hp-fill.low {
+            background: linear-gradient(90deg, #ff6688, #ff3344);
         }
-        
-        .bottom-right { 
-            bottom: 20px; right: 20px; 
-            font-size: 14px;
+        .bottom-left {
+            bottom: 16px; left: 16px;
+            font-size: 10px;
+        }
+        .bottom-right {
+            bottom: 16px; right: 16px;
             text-align: right;
-            padding: 12px 16px;
-            background: rgba(0,20,10,0.8);
-            border-right: 3px solid #88ff99;
         }
-        
-        .crosshair { 
-            position: absolute; 
-            top: 50%; left: 50%; 
-            transform: translate(-50%, -50%); 
-            z-index: 10; 
+        .ammo-bar {
+            display: flex;
+            gap: 4px;
+            margin-top: 6px;
+            justify-content: flex-end;
+        }
+        .ammo-pip {
+            width: 5px;
+            height: 12px;
+            background: #88ff99;
+            box-shadow: 0 0 3px #88ff99;
+        }
+        .ammo-pip.empty {
+            background: #1a3322;
+            box-shadow: none;
+        }
+        .wave-alert {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            border: 2px solid #ff6688;
+            color: #ff6688;
+            padding: 12px 24px;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            z-index: 35;
+            opacity: 0;
+            transition: opacity 0.3s;
             pointer-events: none;
-        }
-        
-        .reload-indicator { 
-            position: absolute; 
-            top: 50%; left: 50%; 
-            transform: translate(-50%, -50%); 
-            background: #000; 
-            border: 2px solid #ff4466; 
-            color: #ff4466; 
-            padding: 16px 32px; 
-            z-index: 40; 
-            display: none; 
-            font-family: monospace; 
-            font-size: 1.2rem; 
-            text-shadow: 0 0 8px #ff4466;
-            animation: reloadPulse 0.6s infinite;
-        }
-        
-        .hit-flash { 
-            position: absolute; 
-            top: 38%; left: 50%; 
-            transform: translate(-50%, -50%); 
-            color: #ff4466; 
-            background: rgba(0,0,0,0.85); 
-            padding: 12px 24px; 
-            border: 1px solid #ff4466; 
-            z-index: 35; 
-            animation: hitAnim 0.9s forwards; 
-            font-family: monospace; 
-            font-size: 1rem; 
             white-space: nowrap;
         }
-        
+        .wave-alert.show {
+            opacity: 1;
+            animation: wavePulse 1s;
+        }
+        @keyframes wavePulse {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+        .sys-msg {
+            position: absolute;
+            bottom: 80px;
+            left: 16px;
+            background: rgba(0,0,0,0.6);
+            color: #ff8899;
+            padding: 4px 10px;
+            font-size: 9px;
+            z-index: 30;
+            border-left: 2px solid #ff6688;
+            pointer-events: none;
+        }
+        .gyro-status {
+            position: absolute;
+            top: 70px;
+            right: 16px;
+            background: rgba(0,15,8,0.7);
+            padding: 4px 10px;
+            font-size: 9px;
+            color: #88ff99;
+            z-index: 30;
+            border: 1px solid rgba(136,255,153,0.4);
+        }
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            pointer-events: none;
+        }
+        .reload-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #000;
+            border: 2px solid #ff4466;
+            color: #ff4466;
+            padding: 16px 32px;
+            z-index: 40;
+            display: none;
+            font-family: monospace;
+            font-size: 1.2rem;
+            white-space: nowrap;
+            animation: reloadPulse 0.5s infinite alternate;
+        }
+        @keyframes reloadPulse {
+            to { text-shadow: 0 0 12px #ff4466; }
+        }
+        .hit-effect {
+            position: absolute;
+            top: 35%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #88ff99;
+            background: rgba(0,0,0,0.8);
+            padding: 8px 20px;
+            border: 1px solid #88ff99;
+            z-index: 35;
+            animation: hitFade 0.8s forwards;
+            font-size: 1rem;
+            white-space: nowrap;
+        }
+        @keyframes hitFade {
+            to { opacity: 0; transform: translate(-50%, -80%); }
+        }
         .damage-flash {
             position: fixed;
             top: 0; left: 0;
@@ -212,130 +240,93 @@
             background: radial-gradient(circle, rgba(255,68,102,0.4) 0%, transparent 70%);
             pointer-events: none;
             z-index: 12;
-            animation: damageFlashAnim 0.3s forwards;
+            animation: damageAnim 0.3s forwards;
         }
-        
-        .muzzle-flash {
+        @keyframes damageAnim {
+            to { opacity: 0; }
+        }
+        .muzzle {
             position: fixed;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 200px; height: 200px;
-            background: radial-gradient(circle, #88ff99 0%, rgba(136,255,153,0.4) 50%, transparent 80%);
+            width: 180px; height: 180px;
+            background: radial-gradient(circle, #aaffbb 0%, rgba(136,255,153,0.3) 40%, transparent 70%);
             border-radius: 50%;
             pointer-events: none;
             z-index: 11;
-            animation: muzzleAnim 0.12s forwards;
+            animation: muzzleAnim 0.1s forwards;
         }
-        
-        #start-overlay { 
-            position: fixed; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            background: #0a0a0a;
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            flex-direction: column; 
+        @keyframes muzzleAnim {
+            to { opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
+        }
+        /* Pantallas */
+        #start-screen {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #050a05;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
             z-index: 100;
             font-family: monospace;
         }
-        
-        #start-button { 
-            background: transparent; 
-            color: #88ff99; 
-            border: 2px solid #88ff99; 
-            padding: 18px 50px; 
-            font-family: monospace; 
-            font-size: 1.3rem; 
-            cursor: pointer; 
-            margin-top: 30px;
-            transition: 0.3s;
+        #start-screen h1 {
+            color: #88ff99;
+            font-size: 2.5rem;
+            letter-spacing: 10px;
+            text-shadow: 0 0 20px #88ff99;
         }
-        
-        #game-over { 
-            position: fixed; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            background: #0a0505;
-            display: none; 
-            justify-content: center; 
-            align-items: center; 
-            flex-direction: column; 
+        #start-btn {
+            background: transparent;
+            color: #88ff99;
+            border: 1px solid #88ff99;
+            padding: 16px 48px;
+            font-size: 1.2rem;
+            margin-top: 30px;
+            cursor: pointer;
+            font-family: monospace;
+            letter-spacing: 4px;
+        }
+        #gameover-screen {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #0a0202;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
             z-index: 200;
         }
-        
-        #restart-btn { 
-            background: transparent; 
-            color: #ff4466; 
-            border: 2px solid #ff4466; 
-            padding: 14px 35px; 
-            margin-top: 25px; 
-            cursor: pointer; 
+        #gameover-screen h1 {
+            color: #ff4466;
+            font-size: 2rem;
+        }
+        #final-score {
+            color: #ff8888;
+            font-size: 2rem;
+            margin: 20px;
+        }
+        #restart-btn {
+            background: transparent;
+            color: #ff4466;
+            border: 1px solid #ff4466;
+            padding: 12px 32px;
+            cursor: pointer;
             font-family: monospace;
+            font-size: 1rem;
         }
-        
-        .gyro-status { 
-            position: absolute; 
-            top: 85px; right: 18px; 
-            background: rgba(0,20,10,0.7); 
-            padding: 6px 12px; 
-            font-size: 9px; 
-            color: #88ff99; 
-            z-index: 3; 
-            border-radius: 0px;
-        }
-        
-        .gyro-debug { 
-            position: absolute; 
-            bottom: 85px; left: 18px; 
-            background: rgba(0,20,10,0.7); 
-            padding: 6px 12px; 
-            font-size: 9px; 
-            color: #88ff99; 
-            z-index: 3; 
-        }
-        
-        .ammo-bar {
-            display: flex;
-            gap: 4px;
-            margin-top: 8px;
-            justify-content: flex-end;
-        }
-        
-        .ammo-bullet {
-            width: 6px;
-            height: 14px;
-            background: #88ff99;
-            box-shadow: 0 0 4px #88ff99;
-        }
-        
-        .ammo-bullet.empty {
-            background: #2a4a3a;
-            box-shadow: none;
-        }
-        
-        .system-message {
+        .indicator {
             position: absolute;
-            bottom: 120px;
-            left: 20px;
-            background: rgba(0,0,0,0.7);
-            color: #ff6688;
-            padding: 4px 10px;
-            font-size: 9px;
-            font-family: monospace;
-            z-index: 30;
-            border-left: 2px solid #ff4466;
-            max-width: 250px;
+            width: 30px;
+            height: 30px;
+            transform: translate(-50%, -50%);
             pointer-events: none;
+            z-index: 28;
+            filter: drop-shadow(0 0 4px currentColor);
         }
-        
-        @keyframes reloadPulse {
-            0% { opacity: 0.7; text-shadow: 0 0 5px #ff4466; }
-            100% { opacity: 1; text-shadow: 0 0 15px #ff4466; }
-        }
-        @keyframes hitAnim { 0% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -70%); } }
-        @keyframes damageFlashAnim { 0% { opacity: 0.7; } 100% { opacity: 0; } }
-        @keyframes muzzleAnim { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.3); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2); } }
     </style>
 </head>
 <body>
@@ -343,560 +334,718 @@
 <video id="camera-feed" autoplay playsinline muted></video>
 <canvas id="game-canvas"></canvas>
 
-<!-- Capas de post-procesado -->
-<div class="noise-layer"></div>
+<div class="noise"></div>
 <div class="scanlines"></div>
-<div class="color-filter"></div>
+<div class="vignette"></div>
+
+<div id="indicators" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:28;"></div>
 
 <div class="hud top-bar">
-    <div class="glitch-text">NEO·PROXY // THE WIRED</div>
+    <div>NEO·PROXY</div>
     <div class="health-container">
-        <div class="health-bar-bg"><div class="health-bar-fill" id="health-fill"></div></div>
-        <div id="health-text" class="glitch-text">100</div>
-        <div id="score" class="glitch-text">ENTROPY: 0</div>
+        <div class="hp-bar"><div class="hp-fill" id="hp-fill"></div></div>
+        <span id="hp-num">100</span>
     </div>
+    <div id="score">0</div>
 </div>
 
+<div class="wave-alert" id="wave-alert">WAVE 1</div>
+
 <div class="crosshair">
-    <svg width="50" height="50" viewBox="0 0 50 50">
-        <circle cx="25" cy="25" r="18" fill="none" stroke="#88ff99" stroke-width="1" opacity="0.6"/>
-        <circle cx="25" cy="25" r="10" fill="none" stroke="#88ff99" stroke-width="1.5"/>
-        <circle cx="25" cy="25" r="3" fill="#88ff99"/>
-        <line x1="25" y1="3" x2="25" y2="12" stroke="#88ff99" stroke-width="2"/>
-        <line x1="25" y1="38" x2="25" y2="47" stroke="#88ff99" stroke-width="2"/>
-        <line x1="3" y1="25" x2="12" y2="25" stroke="#88ff99" stroke-width="2"/>
-        <line x1="38" y1="25" x2="47" y2="25" stroke="#88ff99" stroke-width="2"/>
+    <svg width="44" height="44" viewBox="0 0 44 44">
+        <circle cx="22" cy="22" r="16" fill="none" stroke="#88ff99" stroke-width="1" opacity="0.5"/>
+        <circle cx="22" cy="22" r="8" fill="none" stroke="#88ff99" stroke-width="1.2"/>
+        <circle cx="22" cy="22" r="2.5" fill="#88ff99"/>
+        <line x1="22" y1="2" x2="22" y2="10" stroke="#88ff99" stroke-width="1.5"/>
+        <line x1="22" y1="34" x2="22" y2="42" stroke="#88ff99" stroke-width="1.5"/>
+        <line x1="2" y1="22" x2="10" y2="22" stroke="#88ff99" stroke-width="1.5"/>
+        <line x1="34" y1="22" x2="42" y2="22" stroke="#88ff99" stroke-width="1.5"/>
     </svg>
 </div>
 
 <div class="hud bottom-left">
-    <div id="control-hint" class="glitch-text">INPUT: GYRO/TOUCH</div>
-    <div>TAP: FIRE | DOUBLETAP: CALIBRATE</div>
+    <div id="ctrl-hint">GIROSCOPIO: ACTIVO</div>
+    <div style="font-size:9px;">TOCAR: DISPARAR | DOBLE: CALIBRAR</div>
 </div>
 
 <div class="hud bottom-right">
-    <div id="ammo" class="glitch-text">ROUNDS: 12/12</div>
+    <div id="ammo">12 / 12</div>
     <div class="ammo-bar" id="ammo-bar"></div>
-    <div id="enemies-count" style="margin-top: 8px;">THREATS: 0</div>
+    <div id="enemy-count" style="margin-top:6px;">0</div>
 </div>
 
-<div class="gyro-status" id="gyro-status">SENSOR: INIT</div>
-<div class="gyro-debug" id="gyro-debug">AZIMUTH: 0 | ELEV: 0</div>
-<div class="system-message" id="sysmsg">[ SYSTEM ] WIRED LINK ESTABLISHED</div>
+<div class="gyro-status" id="gyro-status">SENSOR: INICIANDO...</div>
+<div class="sys-msg" id="sys-msg">[SYS] CONEXIÓN ESTABLECIDA</div>
+<div id="reload-ind" class="reload-indicator">RECARGANDO...</div>
 
-<div id="reload-indicator" class="reload-indicator">CYCLE RELOAD...</div>
-
-<div id="start-overlay">
-    <h1 style="color:#88ff99;">NEO·PROXY</h1>
-    <p style="color:#aaeeaa;">ENTER THE WIRED</p>
-    <button id="start-button">CONNECT</button>
-    <p style="color:#448844;">allow camera & motion</p>
+<div id="start-screen">
+    <h1>NEO·PROXY</h1>
+    <p style="color:#448844;">REALIDAD AUMENTADA</p>
+    <button id="start-btn">CONECTAR</button>
+    <p style="color:#336633; margin-top:40px;">permite cámara y sensores</p>
 </div>
 
-<div id="game-over">
-    <h1 style="color:#ff4466;">MEMORY LEAK</h1>
-    <div id="final-score" style="color:#ff8888; font-size:28px;">0</div>
-    <button id="restart-btn">REBOOT</button>
+<div id="gameover-screen">
+    <h1>MEMORY LEAK</h1>
+    <div id="final-score">0</div>
+    <button id="restart-btn">REINICIAR</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
 <script>
-    (function(){
-        // ---------- DOM elements ----------
-        const videoFeed = document.getElementById('camera-feed');
-        const startOverlay = document.getElementById('start-overlay');
-        const gameOverlay = document.getElementById('game-over');
-        const startBtn = document.getElementById('start-button');
-        const restartBtn = document.getElementById('restart-btn');
-        const scoreEl = document.getElementById('score');
-        const ammoEl = document.getElementById('ammo');
-        const ammoBarEl = document.getElementById('ammo-bar');
-        const enemiesCountEl = document.getElementById('enemies-count');
-        const reloadIndicator = document.getElementById('reload-indicator');
-        const gyroStatusEl = document.getElementById('gyro-status');
-        const gyroDebugEl = document.getElementById('gyro-debug');
-        const healthFill = document.getElementById('health-fill');
-        const healthText = document.getElementById('health-text');
-        const sysMsg = document.getElementById('sysmsg');
-        
-        // ---------- Game state ----------
-        let scene, camera, renderer;
-        let enemies = [];
-        let score = 0;
-        let ammo = 12;
-        const maxAmmo = 12;
-        let isReloading = false;
-        let gameActive = false;
-        let canShoot = true;
-        let health = 100;
-        const maxHealth = 100;
-        
-        // Gyro / touch
-        let useTouchControls = false;
-        let isDragging = false;
-        let lastTouchX = 0, lastTouchY = 0;
-        const TOUCH_SENSITIVITY = 0.4;
-        let currentRotationX = 0, currentRotationY = 0;
-        let targetRotationX = 0, targetRotationY = 0;
-        let gyroEnabled = false;
-        
-        // Mensajes narrativos cambiantes
-        const sysMessages = [
-            "MEMORY LEAK DETECTED", "REALITY.SYS NOT RESPONDING",
-            "CONNECTION UNSTABLE", "DATA CORRUPTION",
-            "WIRED OVERLAY ACTIVE", "EGO BOUNDARY LOST",
-            "COGNITIVE HAZARD", "PSEUDO-SPACE FRAGMENT"
-        ];
-        let msgInterval;
-        
-        function updateSystemMessage() {
-            if (!gameActive) return;
-            const idx = Math.floor(Math.random() * sysMessages.length);
-            sysMsg.textContent = `[ SYSTEM ] ${sysMessages[idx]}`;
+(function(){
+    // ---------- DOM ----------
+    const video = document.getElementById('camera-feed');
+    const startScreen = document.getElementById('start-screen');
+    const gameoverScreen = document.getElementById('gameover-screen');
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const scoreEl = document.getElementById('score');
+    const ammoEl = document.getElementById('ammo');
+    const ammoBar = document.getElementById('ammo-bar');
+    const enemyCountEl = document.getElementById('enemy-count');
+    const reloadInd = document.getElementById('reload-ind');
+    const gyroStatus = document.getElementById('gyro-status');
+    const hpFill = document.getElementById('hp-fill');
+    const hpNum = document.getElementById('hp-num');
+    const waveAlert = document.getElementById('wave-alert');
+    const sysMsg = document.getElementById('sys-msg');
+    const ctrlHint = document.getElementById('ctrl-hint');
+    const indicatorsDiv = document.getElementById('indicators');
+
+    // ---------- Estado del juego ----------
+    let scene, camera, renderer;
+    let enemies = [];
+    let score = 0, health = 100, ammo = 12;
+    const MAX_AMMO = 12, MAX_HEALTH = 100;
+    let isReloading = false, gameActive = false, canShoot = true;
+    let wave = 0, waveEnemies = 0, waveCooldown = false;
+
+    // ---------- Rotación de cámara (world-oriented) ----------
+    let currentRotX = 0, currentRotY = 0;
+    let targetRotX = 0, targetRotY = 0;
+    const SMOOTH = 0.1;
+
+    // ---------- Giroscopio ----------
+    let gyroActive = false, gyroAvailable = false;
+    let calibrationAlpha = 0, calibrationBeta = 0;
+    let lastAlpha = 0, lastBeta = 90;
+
+    // ---------- Touch controls ----------
+    let useTouch = false, isDragging = false;
+    let lastTouchX = 0, lastTouchY = 0;
+    const TOUCH_SENS = 0.25;
+
+    // ---------- Partículas y líneas ----------
+    let particleSystem;
+    let particlePositions, particleVelocities;
+    const NUM_PARTICLES = 400;
+    let connectionLines;
+    let linePositions;
+    const MAX_SEGMENTS = 80;
+
+    // ---------- Indicadores direccionales (pool) ----------
+    const indicators = [];
+    const INDICATOR_COLORS = { drone: '#00ffcc', proxy: '#ff3366', ghost: '#cc66ff' };
+
+    function initIndicators() {
+        for (let i = 0; i < 20; i++) {
+            const div = document.createElement('div');
+            div.className = 'indicator';
+            div.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="12,2 22,20 2,20" fill="currentColor" opacity="0.9"/></svg>';
+            div.style.display = 'none';
+            indicatorsDiv.appendChild(div);
+            indicators.push(div);
         }
-        
-        // Glitch en textos cada cierto tiempo
-        function randomGlitchOnElement(el) {
-            if (!el) return;
-            el.classList.add('glitch-text');
-            setTimeout(() => el.classList.remove('glitch-text'), 200);
+    }
+
+    function updateIndicators() {
+        indicators.forEach(i => i.style.display = 'none');
+        let idx = 0;
+        const w = window.innerWidth, h = window.innerHeight;
+        const margin = 40;
+        for (let enemy of enemies) {
+            if (idx >= indicators.length) break;
+            const pos = enemy.position.clone().project(camera);
+            const behind = pos.z > 1;
+            const offX = Math.abs(pos.x) > 1.02;
+            const offY = Math.abs(pos.y) > 1.02;
+            if (!behind && !offX && !offY) continue;
+            // Calcular dirección 2D desde el centro
+            const cx = w/2, cy = h/2;
+            let dx = pos.x * cx + cx - cx;
+            let dy = -pos.y * cy + cy - cy;
+            if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) dx = 1;
+            const angle = Math.atan2(dy, dx);
+            let t = 1;
+            if (Math.abs(Math.cos(angle)) > 0.01) t = Math.min(t, (w/2 - margin) / (Math.abs(Math.cos(angle)) * (w/2)));
+            if (Math.abs(Math.sin(angle)) > 0.01) t = Math.min(t, (h/2 - margin) / (Math.abs(Math.sin(angle)) * (h/2)));
+            t = Math.max(0.3, t);
+            const x = cx + Math.cos(angle) * (w/2 * t);
+            const y = cy + Math.sin(angle) * (h/2 * t);
+            const el = indicators[idx++];
+            el.style.display = 'block';
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.style.transform = `translate(-50%,-50%) rotate(${angle + Math.PI/2}rad)`;
+            el.style.color = INDICATOR_COLORS[enemy.userData.type] || '#88ff99';
         }
-        
-        function periodicUIGlitch() {
-            if (!gameActive) return;
-            const elements = [scoreEl, ammoEl, healthText, enemiesCountEl];
-            const rand = elements[Math.floor(Math.random() * elements.length)];
-            if (rand) randomGlitchOnElement(rand);
-            setTimeout(periodicUIGlitch, 3000 + Math.random() * 4000);
+    }
+
+    // ---------- Partículas ambientales ----------
+    function initParticles() {
+        const geom = new THREE.BufferGeometry();
+        particlePositions = new Float32Array(NUM_PARTICLES * 3);
+        particleVelocities = new Float32Array(NUM_PARTICLES * 3);
+        const colors = new Float32Array(NUM_PARTICLES * 3);
+        for (let i = 0; i < NUM_PARTICLES; i++) {
+            const r = 3 + Math.random() * 8;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            particlePositions[i*3] = r * Math.sin(phi) * Math.cos(theta);
+            particlePositions[i*3+1] = r * Math.sin(phi) * Math.sin(theta) * 0.6;
+            particlePositions[i*3+2] = r * Math.cos(phi);
+            particleVelocities[i*3] = (Math.random() - 0.5) * 0.003;
+            particleVelocities[i*3+1] = (Math.random() - 0.5) * 0.002;
+            particleVelocities[i*3+2] = (Math.random() - 0.5) * 0.003;
+            const col = Math.random();
+            if (col < 0.5) { colors[i*3]=0.3; colors[i*3+1]=1; colors[i*3+2]=0.5; }
+            else if (col < 0.8) { colors[i*3]=0; colors[i*3+1]=0.8; colors[i*3+2]=1; }
+            else { colors[i*3]=0.8; colors[i*3+1]=0.3; colors[i*3+2]=1; }
         }
-        
-        // Health & damage
-        function updateHealthUI() {
-            const percent = (health / maxHealth) * 100;
-            healthFill.style.width = `${percent}%`;
-            healthText.textContent = Math.floor(health);
-            if (health <= 30) healthFill.style.background = "linear-gradient(90deg, #ff6688, #ff4466)";
-            else healthFill.style.background = "linear-gradient(90deg, #88ff99, #2aff66)";
-        }
-        
-        function damagePlayer(amount) {
-            if (!gameActive) return;
-            health -= amount;
-            if (health <= 0) { health = 0; gameOver(); }
-            updateHealthUI();
-            // Efecto chromatic aberration y flash
-            const ab = document.createElement('div');
-            ab.className = 'chromatic-aberration';
-            document.body.appendChild(ab);
-            setTimeout(() => ab.remove(), 200);
-            const flash = document.createElement('div');
-            flash.className = 'damage-flash';
-            document.body.appendChild(flash);
-            setTimeout(() => flash.remove(), 300);
-            if (navigator.vibrate) navigator.vibrate(100);
-        }
-        
-        // Ammo bar
-        function initAmmoBar() {
-            ammoBarEl.innerHTML = '';
-            for (let i = 0; i < maxAmmo; i++) {
-                const bullet = document.createElement('div');
-                bullet.className = 'ammo-bullet';
-                ammoBarEl.appendChild(bullet);
+        geom.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        const mat = new THREE.PointsMaterial({ size: 0.06, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false });
+        particleSystem = new THREE.Points(geom, mat);
+        scene.add(particleSystem);
+    }
+
+    function updateParticles() {
+        for (let i = 0; i < NUM_PARTICLES; i++) {
+            particlePositions[i*3] += particleVelocities[i*3];
+            particlePositions[i*3+1] += particleVelocities[i*3+1];
+            particlePositions[i*3+2] += particleVelocities[i*3+2];
+            const d = Math.sqrt(particlePositions[i*3]**2 + particlePositions[i*3+1]**2 + particlePositions[i*3+2]**2);
+            if (d > 12 || d < 2) {
+                particleVelocities[i*3] *= -0.9;
+                particleVelocities[i*3+1] *= -0.9;
+                particleVelocities[i*3+2] *= -0.9;
             }
         }
-        function updateAmmoBar() {
-            const bullets = ammoBarEl.querySelectorAll('.ammo-bullet');
-            bullets.forEach((b, i) => b.classList.toggle('empty', i >= ammo));
-        }
-        
-        // ---------- ENEMY: Low-poly con wireframe y núcleo ----------
-        function createProxyEnemy(startZ) {
-            const group = new THREE.Group();
-            // Cuerpo principal: Icosaedro oscuro con wireframe brillante
-            const geom = new THREE.IcosahedronGeometry(0.48, 0);
-            const matBody = new THREE.MeshStandardMaterial({
-                color: 0x111111,
-                emissive: 0x220000,
-                roughness: 0.7,
-                metalness: 0.8,
-                wireframe: false
-            });
-            const body = new THREE.Mesh(geom, matBody);
-            group.add(body);
-            
-            // Wireframe exterior (más grande)
-            const wireMat = new THREE.MeshBasicMaterial({ color: 0xff3366, wireframe: true, transparent: true, opacity: 0.7 });
-            const wireframe = new THREE.Mesh(geom, wireMat);
-            wireframe.scale.setScalar(1.08);
-            group.add(wireframe);
-            
-            // Núcleo interno giratorio
-            const coreGeom = new THREE.OctahedronGeometry(0.22);
-            const coreMat = new THREE.MeshStandardMaterial({ color: 0xff6688, emissive: 0xff2244, emissiveIntensity: 0.9 });
-            const core = new THREE.Mesh(coreGeom, coreMat);
-            group.add(core);
-            
-            // Posición aleatoria dentro del cono de visión
-            const x = (Math.random() - 0.5) * 5.5;
-            const y = (Math.random() - 0.5) * 4;
-            group.position.set(x, y, startZ);
-            
-            group.userData = {
-                speed: 0.022 + Math.random() * 0.018,
-                startZ: startZ,
-                core: core,
-                wireframe: wireframe,
-                pulsePhase: Math.random() * Math.PI * 2,
-                rotSpeed: 0.01 + Math.random() * 0.01
-            };
-            return group;
-        }
-        
-        function spawnEnemies(count = 8) {
-            enemies.forEach(e => scene.remove(e));
-            enemies = [];
-            for (let i = 0; i < count; i++) {
-                const zStart = 7 + Math.random() * 4;
-                const enemy = createProxyEnemy(zStart);
-                scene.add(enemy);
-                enemies.push(enemy);
-            }
-            updateEnemiesCount();
-        }
-        
-        function respawnEnemy() {
-            const zStart = 8 + Math.random() * 3;
-            const enemy = createProxyEnemy(zStart);
-            scene.add(enemy);
-            enemies.push(enemy);
-            updateEnemiesCount();
-        }
-        
-        function updateEnemiesCount() {
-            enemiesCountEl.textContent = `THREATS: ${enemies.length}`;
-        }
-        
-        function updateEnemiesMovement() {
-            for (let i = 0; i < enemies.length; i++) {
-                const e = enemies[i];
-                e.position.z -= e.userData.speed;
-                // Rotación y pulsación
-                e.userData.core.rotation.x += 0.03;
-                e.userData.core.rotation.y += 0.04;
-                e.userData.wireframe.rotation.x += 0.01;
-                e.userData.wireframe.rotation.y += 0.02;
-                const pulse = 1 + Math.sin(Date.now() * 0.008 + e.userData.pulsePhase) * 0.1;
-                e.scale.setScalar(pulse);
-                
-                // Colisión con la cámara
-                if (e.position.z < 0.8) {
-                    scene.remove(e);
-                    enemies.splice(i,1);
-                    i--;
-                    damagePlayer(20);
-                    setTimeout(() => { if (gameActive && enemies.length < 12) respawnEnemy(); }, 200);
+        particleSystem.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // ---------- Líneas de conexión entre enemigos ----------
+    function initConnectionLines() {
+        linePositions = new Float32Array(MAX_SEGMENTS * 6);
+        const geom = new THREE.BufferGeometry();
+        geom.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+        geom.setDrawRange(0, 0);
+        const mat = new THREE.LineBasicMaterial({ color: 0x88ff99, transparent: true, opacity: 0.2 });
+        connectionLines = new THREE.LineSegments(geom, mat);
+        scene.add(connectionLines);
+    }
+
+    function updateConnectionLines() {
+        let seg = 0;
+        const threshold = 4.5;
+        for (let i = 0; i < enemies.length && seg < MAX_SEGMENTS; i++) {
+            for (let j = i+1; j < enemies.length && seg < MAX_SEGMENTS; j++) {
+                const d = enemies[i].position.distanceTo(enemies[j].position);
+                if (d < threshold) {
+                    const idx = seg * 6;
+                    linePositions[idx] = enemies[i].position.x;
+                    linePositions[idx+1] = enemies[i].position.y;
+                    linePositions[idx+2] = enemies[i].position.z;
+                    linePositions[idx+3] = enemies[j].position.x;
+                    linePositions[idx+4] = enemies[j].position.y;
+                    linePositions[idx+5] = enemies[j].position.z;
+                    seg++;
                 }
             }
-            if (gameActive && enemies.length < 5) respawnEnemy();
-            updateEnemiesCount();
         }
-        
-        // ---------- Shooting ----------
-        function shoot(e) {
-            if (!gameActive || isReloading || !canShoot) return;
-            if (e) e.preventDefault();
-            if (ammo <= 0) { reload(); return; }
-            
-            canShoot = false;
-            setTimeout(() => canShoot = true, 130);
-            
-            const flash = document.createElement('div');
-            flash.className = 'muzzle-flash';
-            document.body.appendChild(flash);
-            setTimeout(() => flash.remove(), 120);
-            
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
-            const intersects = raycaster.intersectObjects(enemies, true);
-            if (intersects.length > 0) {
-                let hit = intersects[0].object;
-                while (hit.parent && !enemies.includes(hit)) hit = hit.parent;
-                const idx = enemies.indexOf(hit);
-                if (idx !== -1) {
-                    scene.remove(hit);
-                    enemies.splice(idx,1);
-                    score += 100;
-                    updateUI();
-                    const hitDiv = document.createElement('div');
-                    hitDiv.className = 'hit-flash';
-                    hitDiv.textContent = 'FRAGMENTED +100';
-                    document.body.appendChild(hitDiv);
-                    setTimeout(() => hitDiv.remove(), 800);
-                    if (navigator.vibrate) navigator.vibrate(40);
-                    setTimeout(() => { if (gameActive) respawnEnemy(); }, 300);
-                }
+        connectionLines.geometry.setDrawRange(0, seg * 2);
+        connectionLines.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // ---------- Fábrica de enemigos (tres tipos) ----------
+    function createEnemy(type, pos) {
+        const group = new THREE.Group();
+        group.position.copy(pos);
+        let hp, speed, color, wireColor;
+        switch(type) {
+            case 'drone':
+                hp = 1; speed = 0.028; color = 0x00aa88; wireColor = 0x00ffcc;
+                const droneBody = new THREE.Mesh(new THREE.OctahedronGeometry(0.32), new THREE.MeshStandardMaterial({ color: 0x113333, emissive: 0x004444, metalness: 0.8 }));
+                group.add(droneBody);
+                const droneWire = new THREE.Mesh(new THREE.OctahedronGeometry(0.36), new THREE.MeshBasicMaterial({ color: wireColor, wireframe: true, transparent: true, opacity: 0.7 }));
+                group.add(droneWire);
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.02, 8, 24), new THREE.MeshBasicMaterial({ color: wireColor, transparent: true, opacity: 0.5 }));
+                ring.rotation.x = Math.PI/2;
+                group.add(ring);
+                group.userData = { type, hp, speed, ring, wire: droneWire, phase: Math.random()*Math.PI*2 };
+                break;
+            case 'proxy':
+                hp = 3; speed = 0.014; color = 0x881122; wireColor = 0xff3366;
+                const proxyBody = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5), new THREE.MeshStandardMaterial({ color: 0x1a0808, emissive: 0x331111, metalness: 0.7 }));
+                group.add(proxyBody);
+                const proxyWire = new THREE.Mesh(new THREE.IcosahedronGeometry(0.54), new THREE.MeshBasicMaterial({ color: wireColor, wireframe: true, transparent: true, opacity: 0.6 }));
+                group.add(proxyWire);
+                const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshStandardMaterial({ color: 0xff4466, emissive: 0xff2244, emissiveIntensity: 0.7 }));
+                group.add(core);
+                group.userData = { type, hp, speed, wire: proxyWire, core, phase: Math.random()*Math.PI*2 };
+                break;
+            case 'ghost':
+                hp = 1; speed = 0.022; color = 0x552288; wireColor = 0xcc66ff;
+                const ghostBody = new THREE.Mesh(new THREE.TetrahedronGeometry(0.38), new THREE.MeshStandardMaterial({ color: 0x1a0a2a, emissive: 0x331155, transparent: true, opacity: 0.7 }));
+                group.add(ghostBody);
+                const ghostWire = new THREE.Mesh(new THREE.TetrahedronGeometry(0.44), new THREE.MeshBasicMaterial({ color: wireColor, wireframe: true, transparent: true, opacity: 0.8 }));
+                group.add(ghostWire);
+                const ghostCore = new THREE.Mesh(new THREE.SphereGeometry(0.15, 6, 6), new THREE.MeshBasicMaterial({ color: 0xdd88ff, transparent: true }));
+                group.add(ghostCore);
+                group.userData = { type, hp, speed, wire: ghostWire, core: ghostCore, phase: Math.random()*Math.PI*2, teleportTimer: 0 };
+                break;
+        }
+        return group;
+    }
+
+    function spawnEnemy(type) {
+        const radius = 6 + Math.random() * 3;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        const pos = new THREE.Vector3(
+            radius * Math.sin(phi) * Math.cos(theta),
+            radius * Math.sin(phi) * Math.sin(theta) * 0.7,
+            radius * Math.cos(phi)
+        );
+        const enemy = createEnemy(type, pos);
+        scene.add(enemy);
+        enemies.push(enemy);
+    }
+
+    function startWave() {
+        wave++;
+        waveAlert.textContent = `WAVE ${wave}`;
+        waveAlert.classList.add('show');
+        setTimeout(() => waveAlert.classList.remove('show'), 1000);
+        const numDrones = Math.min(4 + wave, 12);
+        const numProxies = Math.min(Math.floor(wave / 2), 5);
+        const numGhosts = Math.min(Math.floor((wave - 1) / 2), 4);
+        waveEnemies = numDrones + numProxies + numGhosts;
+        let delay = 0;
+        for (let i = 0; i < numDrones; i++) {
+            setTimeout(() => { if (gameActive) spawnEnemy('drone'); }, delay);
+            delay += 250 + Math.random() * 300;
+        }
+        for (let i = 0; i < numProxies; i++) {
+            setTimeout(() => { if (gameActive) spawnEnemy('proxy'); }, delay);
+            delay += 500 + Math.random() * 400;
+        }
+        for (let i = 0; i < numGhosts; i++) {
+            setTimeout(() => { if (gameActive) spawnEnemy('ghost'); }, delay);
+            delay += 400 + Math.random() * 400;
+        }
+    }
+
+    function updateEnemies() {
+        const now = performance.now() / 1000;
+        for (let i = 0; i < enemies.length; i++) {
+            const e = enemies[i];
+            const ud = e.userData;
+            // Movimiento hacia el origen (cámara)
+            const dir = e.position.clone().negate();
+            const dist = dir.length();
+            if (dist > 0.05) dir.normalize();
+            e.position.add(dir.multiplyScalar(ud.speed));
+            // Animaciones
+            const pulse = 1 + Math.sin(now * 4 + ud.phase) * 0.08;
+            e.scale.setScalar(pulse);
+            if (ud.wire) {
+                ud.wire.rotation.x += 0.02;
+                ud.wire.rotation.y += 0.03;
             }
-            ammo--;
-            updateUI();
-            if (ammo === 0) reload();
+            if (ud.core) {
+                ud.core.rotation.x += 0.04;
+                ud.core.rotation.y += 0.05;
+            }
+            if (ud.ring) {
+                ud.ring.rotation.z += 0.05;
+            }
+            // Teletransporte de ghost
+            if (ud.type === 'ghost' && dist > 2 && now > ud.teleportTimer) {
+                ud.teleportTimer = now + 2 + Math.random() * 3;
+                const newDir = e.position.clone().negate().normalize();
+                e.position.add(newDir.multiplyScalar(1.2));
+                e.scale.setScalar(0.5);
+            }
+            // Colisión con jugador (distancia < 1.2)
+            if (dist < 1.2) {
+                scene.remove(e);
+                enemies.splice(i,1);
+                i--;
+                const dmg = ud.type === 'proxy' ? 25 : (ud.type === 'ghost' ? 15 : 10);
+                takeDamage(dmg);
+                continue;
+            }
         }
-        
-        function reload() {
-            if (isReloading) return;
-            isReloading = true;
-            reloadIndicator.style.display = 'flex';
-            if (navigator.vibrate) navigator.vibrate([25,40,25]);
+        enemyCountEl.textContent = enemies.length;
+        if (enemies.length === 0 && !waveCooldown && gameActive) {
+            waveCooldown = true;
+            sysMsg.textContent = `[SYS] OLEADA ${wave} COMPLETADA`;
             setTimeout(() => {
-                ammo = maxAmmo;
-                isReloading = false;
-                reloadIndicator.style.display = 'none';
-                updateUI();
-            }, 1400);
-        }
-        
-        function updateUI() {
-            const scoreLabel = Math.random() < 0.2 ? "ENTROPY GAINED" : "DATA CORRUPTED";
-            scoreEl.innerHTML = `${scoreLabel}: ${score}`;
-            ammoEl.innerHTML = `ROUNDS: ${ammo}/${maxAmmo}`;
-            updateAmmoBar();
-            randomGlitchOnElement(scoreEl);
-        }
-        
-        function gameOver() {
-            gameActive = false;
-            clearInterval(msgInterval);
-            document.getElementById('final-score').textContent = `SCORE: ${score}`;
-            gameOverlay.style.display = 'flex';
-        }
-        
-        function restartGame() {
-            health = maxHealth;
-            score = 0;
-            ammo = maxAmmo;
-            updateUI();
-            updateHealthUI();
-            enemies.forEach(e => scene.remove(e));
-            enemies = [];
-            spawnEnemies(8);
-            gameActive = true;
-            gameOverlay.style.display = 'none';
-            targetRotationX = targetRotationY = 0;
-            currentRotationX = currentRotationY = 0;
-            msgInterval = setInterval(updateSystemMessage, 4000);
-            periodicUIGlitch();
-        }
-        
-        // Gyroscope & touch - ABSOLUTE ORIENTATION (compass mode)
-        let gyroCalibrationAlpha = 0; // Offset para calibrar dirección inicial como "frente"
-        
-        function handleOrientation(event) {
-            if (!gameActive) return;
-            
-            // alpha: 0-360° orientación absoluta respecto al Norte (brújula)
-            // beta: -180 to 180° inclinación frontal (pitch)
-            // gamma: -90 to 90° inclinación lateral (roll)
-            let alpha = event.alpha || 0;
-            let beta = event.beta || 0;
-            
-            // Si es la primera vez, calibrar la dirección actual como "frente" (0°)
-            if (!gyroEnabled && (Math.abs(alpha) > 0 || Math.abs(beta) > 0)) {
-                gyroCalibrationAlpha = alpha; // Guardar offset inicial
-                gyroEnabled = true;
-                gyroStatusEl.textContent = "SENSOR: ABSOLUTE MODE";
-            }
-            
-            // Calcular yaw relativo a la dirección inicial (frente al jugador)
-            let relativeYaw = alpha - gyroCalibrationAlpha;
-            // Normalizar a -180 a 180
-            if (relativeYaw > 180) relativeYaw -= 360;
-            if (relativeYaw < -180) relativeYaw += 360;
-            
-            // Limitar yaw y pitch
-            let yaw = Math.min(90, Math.max(-90, relativeYaw));
-            let pitch = Math.min(60, Math.max(-60, beta * 0.5)); // Reducir sensibilidad pitch
-            
-            targetRotationY = yaw;
-            targetRotationX = pitch;
-            
-            // Debug: mostrar orientación absoluta (brújula) y relativa
-            gyroDebugEl.textContent = `COMPASS: ${alpha.toFixed(0)}° | YAW: ${yaw.toFixed(0)}° | PITCH: ${pitch.toFixed(0)}°`;
-        }
-        
-        function initTouchControls() {
-            const canvas = document.getElementById('game-canvas');
-            canvas.addEventListener('touchstart', (e) => {
-                if (!gameActive || !useTouchControls) return;
-                isDragging = true;
-                lastTouchX = e.touches[0].clientX;
-                lastTouchY = e.touches[0].clientY;
-            }, { passive: true });
-            canvas.addEventListener('touchmove', (e) => {
-                if (!gameActive || !useTouchControls || !isDragging) return;
-                e.preventDefault();
-                const dx = (e.touches[0].clientX - lastTouchX) * TOUCH_SENSITIVITY;
-                const dy = (e.touches[0].clientY - lastTouchY) * TOUCH_SENSITIVITY;
-                targetRotationY += dx * 0.12;
-                targetRotationX += dy * 0.12;
-                targetRotationY = Math.min(90, Math.max(-90, targetRotationY));
-                targetRotationX = Math.min(60, Math.max(-60, targetRotationX));
-                lastTouchX = e.touches[0].clientX;
-                lastTouchY = e.touches[0].clientY;
-                gyroDebugEl.textContent = `TOUCH | AZ: ${targetRotationY.toFixed(0)} | EL: ${targetRotationX.toFixed(0)}`;
-            }, { passive: false });
-            canvas.addEventListener('touchend', () => isDragging = false);
-            let mouseDown = false;
-            canvas.addEventListener('mousedown', (e) => {
-                if (!gameActive || !useTouchControls) return;
-                mouseDown = true;
-                lastTouchX = e.clientX;
-                lastTouchY = e.clientY;
-            });
-            canvas.addEventListener('mousemove', (e) => {
-                if (!gameActive || !useTouchControls || !mouseDown) return;
-                const dx = (e.clientX - lastTouchX) * TOUCH_SENSITIVITY;
-                const dy = (e.clientY - lastTouchY) * TOUCH_SENSITIVITY;
-                targetRotationY += dx * 0.12;
-                targetRotationX += dy * 0.12;
-                lastTouchX = e.clientX;
-                lastTouchY = e.clientY;
-            });
-            canvas.addEventListener('mouseup', () => mouseDown = false);
-        }
-        
-        function calibrateGyro() {
-            targetRotationX = targetRotationY = 0;
-            currentRotationX = currentRotationY = 0;
-            gyroStatusEl.textContent = "SENSOR: CALIBRATED";
-            setTimeout(() => { if (gyroStatusEl && gameActive) gyroStatusEl.textContent = useTouchControls ? "INPUT: TOUCH" : "SENSOR: ACTIVE"; }, 1500);
-        }
-        
-        // Three.js
-        function initThree() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0,0,0);
-            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), alpha: true, antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setClearColor(0x000000, 0);
-            
-            const ambient = new THREE.AmbientLight(0x112211);
-            scene.add(ambient);
-            const dirLight = new THREE.DirectionalLight(0x88ffaa, 0.8);
-            dirLight.position.set(1,2,3);
-            scene.add(dirLight);
-            const fillLight = new THREE.PointLight(0x88ff99, 0.4);
-            fillLight.position.set(0,1,2);
-            scene.add(fillLight);
-            
-            const grid = new THREE.GridHelper(14, 20, 0x88ff99, 0x226644);
-            grid.position.y = -1.8;
-            grid.material.transparent = true;
-            grid.material.opacity = 0.2;
-            scene.add(grid);
-        }
-        
-        async function initCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } });
-                videoFeed.srcObject = stream;
-                return true;
-            } catch(e) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    videoFeed.srcObject = stream;
-                    return true;
-                } catch(e2) {
-                    videoFeed.style.display = 'none';
-                    return false;
-                }
-            }
-        }
-        
-        async function requestGyroPermission() {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                try {
-                    const response = await DeviceOrientationEvent.requestPermission();
-                    if (response === 'granted') {
-                        window.addEventListener('deviceorientation', handleOrientation);
-                        return true;
-                    }
-                } catch(e) {}
-                return false;
-            } else {
-                window.addEventListener('deviceorientation', handleOrientation);
-                return true;
-            }
-        }
-        
-        function animate() {
-            requestAnimationFrame(animate);
-            if (!gameActive) { if (renderer && camera) renderer.render(scene, camera); return; }
-            const SMOOTH = 0.08;
-            currentRotationY += (targetRotationY - currentRotationY) * SMOOTH;
-            currentRotationX += (targetRotationX - currentRotationX) * SMOOTH;
-            camera.rotation.order = 'YXZ';
-            camera.rotation.y = currentRotationY * Math.PI / 180;
-            camera.rotation.x = currentRotationX * Math.PI / 180;
-            camera.rotation.z = 0;
-            
-            updateEnemiesMovement();
-            renderer.render(scene, camera);
-        }
-        
-        async function initGame() {
-            startBtn.textContent = "CONNECTING...";
-            startBtn.disabled = true;
-            await initCamera();
-            initThree();
-            spawnEnemies(8);
-            await requestGyroPermission();
-            setTimeout(() => {
-                if (!gyroEnabled && gameActive) {
-                    useTouchControls = true;
-                    initTouchControls();
-                    gyroStatusEl.textContent = "INPUT: TOUCH";
+                if (gameActive) {
+                    waveCooldown = false;
+                    startWave();
                 }
             }, 2500);
-            gameActive = true;
-            animate();
-            
-            let lastTap = 0;
-            document.addEventListener('touchend', (e) => {
-                const now = Date.now();
-                if (now - lastTap < 250) calibrateGyro();
-                else if (!isDragging) shoot(e);
-                lastTap = now;
-            });
-            document.addEventListener('click', (e) => {
-                if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
-                shoot(e);
-            });
-            window.addEventListener('keydown', (e) => {
-                if (e.key === 'r' || e.key === 'R') reload();
-                if (e.key === 'c' || e.key === 'C') calibrateGyro();
-                if (e.key === ' ') shoot(e);
-            });
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-            
-            startOverlay.style.display = 'none';
-            startBtn.disabled = false;
-            updateHealthUI();
-            initAmmoBar();
-            updateAmmoBar();
-            msgInterval = setInterval(updateSystemMessage, 4000);
-            periodicUIGlitch();
         }
-        
-        startBtn.addEventListener('click', initGame);
-        restartBtn.addEventListener('click', restartGame);
+    }
+
+    // ---------- Daño y vida ----------
+    function takeDamage(amount) {
+        if (!gameActive) return;
+        health = Math.max(0, health - amount);
+        updateHealthUI();
+        // Efectos visuales
+        const flash = document.createElement('div');
+        flash.className = 'damage-flash';
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 300);
+        // Audio simulado
+        if (navigator.vibrate) navigator.vibrate(80);
+        if (health <= 0) gameOver();
+    }
+
+    function updateHealthUI() {
+        const percent = (health / MAX_HEALTH) * 100;
+        hpFill.style.width = percent + '%';
+        hpNum.textContent = Math.floor(health);
+        if (health <= 30) hpFill.classList.add('low');
+        else hpFill.classList.remove('low');
+    }
+
+    // ---------- Disparo ----------
+    function shoot(e) {
+        if (!gameActive || isReloading || !canShoot) return;
+        if (e) e.preventDefault();
+        if (ammo <= 0) { reload(); return; }
+        canShoot = false;
+        setTimeout(() => canShoot = true, 120);
+        // Efecto visual de disparo
+        const muzzle = document.createElement('div');
+        muzzle.className = 'muzzle';
+        document.body.appendChild(muzzle);
+        setTimeout(() => muzzle.remove(), 100);
+        // Raycast desde el centro de la cámara
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+        const hits = raycaster.intersectObjects(enemies, true);
+        if (hits.length > 0) {
+            let hitObj = hits[0].object;
+            let enemyGroup = hitObj;
+            while (enemyGroup.parent && !enemies.includes(enemyGroup)) enemyGroup = enemyGroup.parent;
+            const idx = enemies.indexOf(enemyGroup);
+            if (idx !== -1) {
+                const ud = enemyGroup.userData;
+                ud.hp--;
+                if (ud.hp <= 0) {
+                    scene.remove(enemyGroup);
+                    enemies.splice(idx,1);
+                    const points = ud.type === 'proxy' ? 300 : (ud.type === 'ghost' ? 200 : 100);
+                    score += points;
+                    updateUI();
+                    const hitDiv = document.createElement('div');
+                    hitDiv.className = 'hit-effect';
+                    hitDiv.textContent = `+${points}`;
+                    if (ud.type === 'proxy') hitDiv.style.color = '#ff6688';
+                    if (ud.type === 'ghost') hitDiv.style.color = '#cc88ff';
+                    document.body.appendChild(hitDiv);
+                    setTimeout(() => hitDiv.remove(), 800);
+                    if (navigator.vibrate) navigator.vibrate(30);
+                } else {
+                    // daño pero no muere
+                    enemyGroup.scale.setScalar(1.4);
+                    setTimeout(() => enemyGroup.scale.setScalar(1), 150);
+                    if (navigator.vibrate) navigator.vibrate(20);
+                }
+            }
+        }
+        ammo--;
+        updateUI();
+        if (ammo === 0) reload();
+    }
+
+    function reload() {
+        if (isReloading) return;
+        isReloading = true;
+        reloadInd.style.display = 'flex';
+        setTimeout(() => {
+            ammo = MAX_AMMO;
+            isReloading = false;
+            reloadInd.style.display = 'none';
+            updateUI();
+        }, 1200);
+    }
+
+    function updateUI() {
+        scoreEl.textContent = score;
+        ammoEl.textContent = `${ammo} / ${MAX_AMMO}`;
+        const pips = ammoBar.querySelectorAll('.ammo-pip');
+        pips.forEach((p, i) => p.classList.toggle('empty', i >= ammo));
+    }
+
+    function gameOver() {
+        gameActive = false;
+        document.getElementById('final-score').textContent = `PUNTUACIÓN: ${score}`;
+        gameoverScreen.style.display = 'flex';
+    }
+
+    function restart() {
+        health = MAX_HEALTH;
+        score = 0;
+        ammo = MAX_AMMO;
+        wave = 0;
+        waveCooldown = false;
+        enemies.forEach(e => scene.remove(e));
+        enemies = [];
+        updateHealthUI();
+        updateUI();
+        gameoverScreen.style.display = 'none';
+        gameActive = true;
+        startWave();
+    }
+
+    // ---------- Giroscopio ----------
+    function handleOrientation(e) {
+        if (!gameActive) return;
+        let alpha = e.alpha || 0;
+        let beta = e.beta || 90;
+        lastAlpha = alpha;
+        lastBeta = beta;
+        if (!gyroActive) return;
+        let yaw = alpha - calibrationAlpha;
+        let pitch = (beta - 90) - calibrationBeta;
+        if (yaw > 180) yaw -= 360;
+        if (yaw < -180) yaw += 360;
+        targetRotY = -yaw;
+        targetRotX = Math.min(70, Math.max(-70, pitch));
+        if (!gyroAvailable && (Math.abs(alpha) > 0.1 || Math.abs(beta-90) > 0.1)) {
+            gyroAvailable = true;
+            gyroStatus.textContent = 'SENSOR: ACTIVO';
+            ctrlHint.textContent = 'GIROSCOPIO: ACTIVO';
+        }
+    }
+
+    async function requestGyro() {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            try {
+                const response = await DeviceOrientationEvent.requestPermission();
+                if (response === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    gyroActive = true;
+                    return true;
+                }
+            } catch(e) {}
+            return false;
+        } else {
+            window.addEventListener('deviceorientation', handleOrientation);
+            gyroActive = true;
+            return true;
+        }
+    }
+
+    function calibrate() {
+        calibrationAlpha = lastAlpha;
+        calibrationBeta = lastBeta - 90;
+        targetRotX = 0;
+        targetRotY = 0;
+        gyroStatus.textContent = 'CALIBRADO';
+        setTimeout(() => {
+            if (gameActive) gyroStatus.textContent = useTouch ? 'INPUT: TOUCH' : 'SENSOR: ACTIVO';
+        }, 1000);
+    }
+
+    // ---------- Touch fallback ----------
+    function initTouchControls() {
+        const canvas = document.getElementById('game-canvas');
+        canvas.addEventListener('touchstart', e => {
+            if (!gameActive || !useTouch) return;
+            isDragging = true;
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+            gyroActive = false;
+        }, { passive: true });
+        canvas.addEventListener('touchmove', e => {
+            if (!gameActive || !useTouch || !isDragging) return;
+            e.preventDefault();
+            const dx = e.touches[0].clientX - lastTouchX;
+            const dy = e.touches[0].clientY - lastTouchY;
+            targetRotY += dx * TOUCH_SENS;
+            targetRotX += dy * TOUCH_SENS;
+            targetRotX = Math.min(70, Math.max(-70, targetRotX));
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+        }, { passive: false });
+        canvas.addEventListener('touchend', () => {
+            isDragging = false;
+            if (gyroAvailable) gyroActive = true;
+        });
+        // Mouse
+        let mouseDown = false;
+        canvas.addEventListener('mousedown', e => {
+            if (!gameActive || !useTouch) return;
+            mouseDown = true;
+            lastTouchX = e.clientX;
+            lastTouchY = e.clientY;
+            gyroActive = false;
+        });
+        canvas.addEventListener('mousemove', e => {
+            if (!gameActive || !useTouch || !mouseDown) return;
+            const dx = e.clientX - lastTouchX;
+            const dy = e.clientY - lastTouchY;
+            targetRotY += dx * TOUCH_SENS;
+            targetRotX += dy * TOUCH_SENS;
+            targetRotX = Math.min(70, Math.max(-70, targetRotX));
+            lastTouchX = e.clientX;
+            lastTouchY = e.clientY;
+        });
+        canvas.addEventListener('mouseup', () => { mouseDown = false; if (gyroAvailable) gyroActive = true; });
+    }
+
+    // ---------- Three.js setup ----------
+    function initThree() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 0, 0);
+        renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x000000, 0);
+        // Luces
+        const ambient = new THREE.AmbientLight(0x224422, 0.7);
+        scene.add(ambient);
+        const dirLight = new THREE.DirectionalLight(0x88ffaa, 0.6);
+        dirLight.position.set(2, 3, 4);
+        scene.add(dirLight);
+        const fillLight = new THREE.PointLight(0x88ff99, 0.3);
+        fillLight.position.set(0, 1, 3);
+        scene.add(fillLight);
+        // Grid de referencia
+        const grid = new THREE.GridHelper(18, 24, 0x44aa66, 0x224433);
+        grid.position.y = -2;
+        grid.material.transparent = true;
+        grid.material.opacity = 0.15;
+        scene.add(grid);
+        initParticles();
+        initConnectionLines();
+    }
+
+    async function initCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
+            video.srcObject = stream;
+            return true;
+        } catch(e) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                return true;
+            } catch(e2) {
+                video.style.display = 'none';
+                return false;
+            }
+        }
+    }
+
+    // ---------- Inicialización principal ----------
+    async function init() {
+        startBtn.textContent = 'CONECTANDO...';
+        startBtn.disabled = true;
+        await initCamera();
+        initThree();
         initAmmoBar();
-    })();
+        initIndicators();
+
+        const gyroEnabled = await requestGyro();
+        if (!gyroEnabled) {
+            useTouch = true;
+            initTouchControls();
+            gyroStatus.textContent = 'INPUT: TOUCH';
+            ctrlHint.textContent = 'ARRASTRAR: GIRAR | TOCAR: DISPARAR';
+        } else {
+            // también activamos touch como respaldo
+            useTouch = true;
+            initTouchControls();
+            ctrlHint.textContent = 'GIRO + TOQUE ACTIVOS';
+        }
+
+        // Eventos de disparo y calibración
+        let lastTap = 0;
+        document.addEventListener('touchend', e => {
+            if (!gameActive) return;
+            const now = Date.now();
+            if (now - lastTap < 250) {
+                calibrate();
+            } else if (!isDragging) {
+                shoot(e);
+            }
+            lastTap = now;
+        });
+        document.addEventListener('click', e => {
+            if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
+            shoot(e);
+        });
+        window.addEventListener('keydown', e => {
+            if (e.key === 'r' || e.key === 'R') reload();
+            if (e.key === 'c' || e.key === 'C') calibrate();
+            if (e.key === ' ') shoot(e);
+        });
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        startScreen.style.display = 'none';
+        gameActive = true;
+        updateHealthUI();
+        startWave();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (!gameActive) {
+                if (renderer) renderer.render(scene, camera);
+                return;
+            }
+            // Suavizar rotación de cámara
+            currentRotX += (targetRotX - currentRotX) * SMOOTH;
+            currentRotY += (targetRotY - currentRotY) * SMOOTH;
+            camera.rotation.order = 'YXZ';
+            camera.rotation.x = currentRotX * Math.PI / 180;
+            camera.rotation.y = currentRotY * Math.PI / 180;
+            camera.rotation.z = 0;
+            updateEnemies();
+            updateParticles();
+            updateConnectionLines();
+            updateIndicators();
+            renderer.render(scene, camera);
+        }
+        animate();
+    }
+
+    function initAmmoBar() {
+        ammoBar.innerHTML = '';
+        for (let i = 0; i < MAX_AMMO; i++) {
+            const pip = document.createElement('div');
+            pip.className = 'ammo-pip';
+            ammoBar.appendChild(pip);
+        }
+    }
+
+    startBtn.addEventListener('click', init);
+    restartBtn.addEventListener('click', restart);
+    initAmmoBar();
+})();
 </script>
 </body>
 </html>
