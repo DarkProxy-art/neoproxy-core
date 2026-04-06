@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NEO·PROXY // AR ULTIMATE</title>
+    <title>NEO·PROXY // AR ULTIMATE FIXED</title>
     <style>
         * {
             margin: 0;
@@ -41,63 +41,60 @@
             outline: none;
             touch-action: none;
         }
-        /* Post-processing layers */
         .noise {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJmIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjciIG51bU9jdGF2ZXM9IjMiLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjZikiIG9wYWNpdHk9IjAuMDYiLz48L3N2Zz4=');
+            inset: 0;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjgiIG51bU9jdGF2ZXM9IjMiLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbuKAnSkgb3BhY2l0eT0iMC4wNCIvPjwvc3ZnPg==');
             background-repeat: repeat;
-            opacity: 0.2;
             pointer-events: none;
-            z-index: 20;
+            z-index: 18;
             mix-blend-mode: overlay;
-            animation: staticShift 0.2s steps(3) infinite;
+            animation: noiseAnim 0.15s steps(4) infinite;
         }
-        @keyframes staticShift {
-            0% { transform: translate(0,0); opacity: 0.2; }
-            50% { transform: translate(2px, -1px); opacity: 0.25; }
-            100% { transform: translate(-1px, 1px); opacity: 0.2; }
+        @keyframes noiseAnim {
+            0%,100%{transform:translate(0,0)}
+            25%{transform:translate(-2px,1px)}
+            50%{transform:translate(1px,-2px)}
+            75%{transform:translate(-1px,2px)}
         }
         .scanlines {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 4px);
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
             pointer-events: none;
-            z-index: 21;
-            opacity: 0.5;
+            z-index: 19;
         }
         .vignette {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
             pointer-events: none;
-            z-index: 22;
+            z-index: 20;
         }
-        /* HUD */
         .hud {
             position: absolute;
             z-index: 30;
             pointer-events: none;
             font-family: 'Courier New', monospace;
             font-weight: bold;
-            color: #88ff99;
-            text-shadow: 0 0 6px #2aff66;
-            background: rgba(0, 15, 8, 0.8);
+            color: #00ffc8;
+            text-shadow: 0 0 8px #00ffc8;
+            background: rgba(0,20,15,0.85);
             backdrop-filter: blur(2px);
-            padding: 8px 14px;
-            border-left: 2px solid #88ff99;
+            padding: 8px 12px;
+            border-left: 2px solid #00ffc8;
             font-size: 12px;
         }
         .top-bar {
-            top: 16px; left: 16px; right: 16px;
+            top: 12px;
+            left: 12px;
+            right: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(0, 15, 8, 0.85);
-            border: 1px solid rgba(136,255,153,0.4);
+            background: linear-gradient(180deg, rgba(0,30,25,0.9), rgba(0,20,15,0.85));
+            border: 1px solid rgba(0,255,200,0.3);
+            border-radius: 4px;
             border-left: none;
             border-right: none;
         }
@@ -107,42 +104,45 @@
             gap: 12px;
         }
         .hp-bar {
-            width: 160px;
-            height: 14px;
-            background: #0a1a10;
-            border: 1px solid #88ff99;
+            width: 140px;
+            height: 10px;
+            background: rgba(0,50,40,0.8);
+            border: 1px solid #00ffc8;
+            overflow: hidden;
         }
         .hp-fill {
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, #88ff99, #2aff66);
+            background: linear-gradient(90deg, #00ffc8, #00dd99);
             transition: width 0.1s;
         }
         .hp-fill.low {
             background: linear-gradient(90deg, #ff6688, #ff3344);
         }
         .bottom-left {
-            bottom: 16px; left: 16px;
+            bottom: 12px;
+            left: 12px;
             font-size: 10px;
         }
         .bottom-right {
-            bottom: 16px; right: 16px;
+            bottom: 12px;
+            right: 12px;
             text-align: right;
         }
         .ammo-bar {
             display: flex;
-            gap: 4px;
-            margin-top: 6px;
+            gap: 3px;
+            margin-top: 5px;
             justify-content: flex-end;
         }
         .ammo-pip {
             width: 5px;
             height: 12px;
-            background: #88ff99;
-            box-shadow: 0 0 3px #88ff99;
+            background: #00ffc8;
+            box-shadow: 0 0 4px #00ffc8;
         }
         .ammo-pip.empty {
-            background: #1a3322;
+            background: rgba(0,255,200,0.15);
             box-shadow: none;
         }
         .crosshair {
@@ -159,53 +159,57 @@
             left: 50%;
             transform: translate(-50%, -50%);
             background: #000;
-            border: 2px solid #ff4466;
-            color: #ff4466;
-            padding: 16px 32px;
+            border: 2px solid #ff6600;
+            color: #ff6600;
+            padding: 14px 28px;
             z-index: 40;
             display: none;
-            font-family: monospace;
-            font-size: 1.2rem;
+            font-size: 1rem;
             white-space: nowrap;
             animation: reloadPulse 0.5s infinite alternate;
         }
         @keyframes reloadPulse {
-            to { text-shadow: 0 0 12px #ff4466; }
+            to { box-shadow: 0 0 30px rgba(255,102,0,0.6); }
         }
-        .hit-effect {
+        .hit-text {
             position: absolute;
-            top: 35%;
+            top: 38%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: #88ff99;
-            background: rgba(0,0,0,0.8);
-            padding: 8px 20px;
-            border: 1px solid #88ff99;
+            color: #00ffc8;
+            background: rgba(0,20,15,0.9);
+            padding: 8px 18px;
+            border: 1px solid #00ffc8;
             z-index: 35;
-            animation: hitFade 0.8s forwards;
             font-size: 1rem;
             white-space: nowrap;
+            animation: hitAnim 0.7s forwards;
         }
-        @keyframes hitFade {
+        @keyframes hitAnim {
             to { opacity: 0; transform: translate(-50%, -80%); }
+        }
+        .hit-text.critical {
+            color: #ffcc00;
+            border-color: #ffcc00;
         }
         .damage-flash {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: radial-gradient(circle, rgba(255,68,102,0.4) 0%, transparent 70%);
+            inset: 0;
+            background: radial-gradient(circle, rgba(255,50,50,0.5) 0%, transparent 60%);
             pointer-events: none;
-            z-index: 12;
-            animation: damageAnim 0.3s forwards;
+            z-index: 15;
+            animation: damageAnim 0.25s forwards;
         }
         @keyframes damageAnim {
             to { opacity: 0; }
         }
         .muzzle {
             position: fixed;
-            top: 50%; left: 50%;
+            top: 50%;
+            left: 50%;
             transform: translate(-50%, -50%);
-            width: 180px; height: 180px;
+            width: 180px;
+            height: 180px;
             background: radial-gradient(circle, #aaffbb 0%, rgba(136,255,153,0.3) 40%, transparent 70%);
             border-radius: 50%;
             pointer-events: none;
@@ -220,85 +224,79 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8);
-            border: 2px solid #ff6688;
-            color: #ff6688;
-            padding: 12px 24px;
-            font-size: 24px;
-            font-weight: bold;
+            background: rgba(0,0,0,0.9);
+            border: 2px solid #00ffc8;
+            color: #00ffc8;
+            padding: 14px 36px;
+            font-size: 1.5rem;
             letter-spacing: 4px;
             z-index: 35;
             opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
             white-space: nowrap;
         }
         .wave-alert.show {
-            opacity: 1;
-            animation: wavePulse 1s;
+            animation: waveAlertAnim 1.5s forwards;
         }
-        @keyframes wavePulse {
-            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
-            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        @keyframes waveAlertAnim {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
         }
         .gyro-status {
             position: absolute;
-            top: 70px;
-            right: 16px;
-            background: rgba(0,15,8,0.7);
+            top: 65px;
+            right: 12px;
+            background: rgba(0,20,15,0.8);
             padding: 4px 10px;
             font-size: 9px;
-            color: #88ff99;
-            z-index: 30;
-            border: 1px solid rgba(136,255,153,0.4);
+            border: 1px solid rgba(0,255,200,0.3);
+            border-radius: 4px;
         }
-        .sys-msg {
+        .powerup-status {
             position: absolute;
-            bottom: 80px;
-            left: 16px;
-            background: rgba(0,0,0,0.6);
-            color: #ff8899;
+            top: 90px;
+            right: 12px;
+            background: rgba(0,20,15,0.8);
             padding: 4px 10px;
             font-size: 9px;
-            z-index: 30;
-            border-left: 2px solid #ff6688;
-            pointer-events: none;
+            border-radius: 4px;
+            display: none;
+            color: #ffcc00;
+        }
+        .powerup-status.active {
+            display: block;
         }
         #start-screen {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: #050a05;
+            inset: 0;
+            background: linear-gradient(180deg, #001a15, #000a08);
             display: flex;
             justify-content: center;
             align-items: center;
             flex-direction: column;
             z-index: 100;
-            font-family: monospace;
         }
         #start-screen h1 {
-            color: #88ff99;
-            font-size: 2.5rem;
-            letter-spacing: 10px;
-            text-shadow: 0 0 20px #88ff99;
+            color: #00ffc8;
+            font-size: 2rem;
+            letter-spacing: 8px;
+            text-shadow: 0 0 20px #00ffc8;
         }
         #start-btn {
             background: transparent;
-            color: #88ff99;
-            border: 1px solid #88ff99;
-            padding: 16px 48px;
-            font-size: 1.2rem;
-            margin-top: 30px;
+            color: #00ffc8;
+            border: 1px solid #00ffc8;
+            padding: 14px 42px;
+            font-size: 1.1rem;
             cursor: pointer;
+            margin-top: 30px;
             font-family: monospace;
             letter-spacing: 4px;
         }
         #gameover-screen {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: #0a0202;
+            inset: 0;
+            background: linear-gradient(180deg, #1a0505, #0a0202);
             display: none;
             justify-content: center;
             align-items: center;
@@ -311,7 +309,7 @@
         }
         #final-score {
             color: #ff8888;
-            font-size: 2rem;
+            font-size: 1.5rem;
             margin: 20px;
         }
         #restart-btn {
@@ -321,7 +319,6 @@
             padding: 12px 32px;
             cursor: pointer;
             font-family: monospace;
-            font-size: 1rem;
         }
     </style>
 </head>
@@ -338,539 +335,630 @@
     <div>NEO·PROXY</div>
     <div class="health-container">
         <div class="hp-bar"><div class="hp-fill" id="hp-fill"></div></div>
-        <span id="hp-num">100</span>
+        <span id="hp-text">100</span>
     </div>
-    <div id="score">0</div>
+    <div id="score-display">0</div>
 </div>
 
 <div class="crosshair">
-    <svg width="44" height="44" viewBox="0 0 44 44">
-        <circle cx="22" cy="22" r="16" fill="none" stroke="#88ff99" stroke-width="1" opacity="0.5"/>
-        <circle cx="22" cy="22" r="8" fill="none" stroke="#88ff99" stroke-width="1.2"/>
-        <circle cx="22" cy="22" r="2.5" fill="#88ff99"/>
-        <line x1="22" y1="2" x2="22" y2="10" stroke="#88ff99" stroke-width="1.5"/>
-        <line x1="22" y1="34" x2="22" y2="42" stroke="#88ff99" stroke-width="1.5"/>
-        <line x1="2" y1="22" x2="10" y2="22" stroke="#88ff99" stroke-width="1.5"/>
-        <line x1="34" y1="22" x2="42" y2="22" stroke="#88ff99" stroke-width="1.5"/>
+    <svg width="48" height="48" viewBox="0 0 48 48">
+        <circle cx="24" cy="24" r="18" fill="none" stroke="#00ffc8" stroke-width="0.8" opacity="0.5"/>
+        <circle cx="24" cy="24" r="10" fill="none" stroke="#00ffc8" stroke-width="1"/>
+        <circle cx="24" cy="24" r="2.5" fill="#00ffc8"/>
+        <line x1="24" y1="4" x2="24" y2="12" stroke="#00ffc8" stroke-width="1.5"/>
+        <line x1="24" y1="36" x2="24" y2="44" stroke="#00ffc8" stroke-width="1.5"/>
+        <line x1="4" y1="24" x2="12" y2="24" stroke="#00ffc8" stroke-width="1.5"/>
+        <line x1="36" y1="24" x2="44" y2="24" stroke="#00ffc8" stroke-width="1.5"/>
     </svg>
 </div>
 
 <div class="hud bottom-left">
-    <div id="ctrl-hint">GIROSCOPIO: INICIANDO...</div>
+    <div id="control-hint">INICIANDO...</div>
     <div style="font-size:9px;">TOCAR: DISPARAR | DOBLE: CALIBRAR</div>
 </div>
 
 <div class="hud bottom-right">
-    <div id="ammo">12 / 12</div>
+    <div id="ammo-count">12 / 12</div>
     <div class="ammo-bar" id="ammo-bar"></div>
-    <div id="enemy-count" style="margin-top:6px;">0</div>
+    <div style="margin-top:6px;">WAVE <span id="wave-num">0</span></div>
+    <div>ENEMIGOS: <span id="enemy-count">0</span></div>
 </div>
 
 <div class="gyro-status" id="gyro-status">SENSOR: INICIANDO...</div>
-<div class="sys-msg" id="sys-msg">[SYS] CONEXIÓN ESTABLECIDA</div>
-<div id="reload-ind" class="reload-indicator">RECARGANDO...</div>
+<div class="powerup-status" id="powerup-status">POWERUP</div>
+<div id="reload-indicator" class="reload-indicator">RECARGANDO</div>
 <div class="wave-alert" id="wave-alert">WAVE 1</div>
 
 <div id="start-screen">
     <h1>NEO·PROXY</h1>
-    <p style="color:#448844;">AR ULTIMATE</p>
+    <p style="color:#00aa88;">AR ULTIMATE</p>
     <button id="start-btn">CONECTAR</button>
-    <p style="color:#336633; margin-top:40px;">permite cámara y sensores</p>
+    <p style="color:#336633; margin-top:30px;">permite cámara y sensores</p>
 </div>
 
 <div id="gameover-screen">
     <h1>MEMORY LEAK</h1>
     <div id="final-score">0</div>
+    <div style="color:#ff8888; margin-bottom:20px;" id="highscore-display">RECORD: 0</div>
     <button id="restart-btn">REINICIAR</button>
 </div>
 
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
 <script>
-    (function(){
-        // ---------- DOM elements ----------
-        const video = document.getElementById('camera-feed');
-        const startScreen = document.getElementById('start-screen');
-        const gameoverScreen = document.getElementById('gameover-screen');
-        const startBtn = document.getElementById('start-btn');
-        const restartBtn = document.getElementById('restart-btn');
-        const scoreEl = document.getElementById('score');
-        const ammoEl = document.getElementById('ammo');
-        const ammoBar = document.getElementById('ammo-bar');
-        const enemyCountEl = document.getElementById('enemy-count');
-        const reloadInd = document.getElementById('reload-ind');
-        const gyroStatus = document.getElementById('gyro-status');
-        const hpFill = document.getElementById('hp-fill');
-        const hpNum = document.getElementById('hp-num');
-        const waveAlert = document.getElementById('wave-alert');
-        const ctrlHint = document.getElementById('ctrl-hint');
-        const sysMsg = document.getElementById('sys-msg');
-
-        // ---------- Game state ----------
-        let scene, camera, engine;
-        let enemies = [];
-        let score = 0, health = 100, ammo = 12;
-        const MAX_AMMO = 12, MAX_HEALTH = 100;
-        let isReloading = false, gameActive = false, canShoot = true;
-        let wave = 0, waveCooldown = false;
-        let lastTapTime = 0;
-        let useTouchFallback = false;
-        let cameraRotation = { y: 0, x: 0 };
-
-        // ---------- Audio (Web Audio API) ----------
-        let audioCtx = null;
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
+(function(){
+    'use strict';
+    
+    const video = document.getElementById('camera-feed');
+    const startScreen = document.getElementById('start-screen');
+    const gameoverScreen = document.getElementById('gameover-screen');
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const hpFill = document.getElementById('hp-fill');
+    const hpText = document.getElementById('hp-text');
+    const scoreDisplay = document.getElementById('score-display');
+    const ammoCount = document.getElementById('ammo-count');
+    const ammoBar = document.getElementById('ammo-bar');
+    const waveNumSpan = document.getElementById('wave-num');
+    const enemyCountSpan = document.getElementById('enemy-count');
+    const gyroStatus = document.getElementById('gyro-status');
+    const controlHint = document.getElementById('control-hint');
+    const reloadIndicator = document.getElementById('reload-indicator');
+    const waveAlert = document.getElementById('wave-alert');
+    const finalScore = document.getElementById('final-score');
+    const highscoreDisplay = document.getElementById('highscore-display');
+    const powerupStatus = document.getElementById('powerup-status');
+    
+    const CONFIG = {
+        MAX_AMMO: 12,
+        MAX_HEALTH: 100,
+        MAX_ENEMIES: 20,
+        COMBO_TIMEOUT: 2000,
+        WAVE_DELAY: 2500,
+        RELOAD_TIME: 1400,
+        SHOOT_COOLDOWN: 120
+    };
+    
+    let engine = null, scene = null, camera = null;
+    let gameActive = false;
+    let score = 0, health = 100, ammo = 12, wave = 0, combo = 0, lastKillTime = 0;
+    let isReloading = false, canShoot = true, waveCleared = false;
+    let enemies = [], particles = [], powerups = [];
+    let activePowerup = null, powerupTimer = null;
+    let highscore = parseInt(localStorage.getItem('neoproxy_highscore') || '0');
+    let useTouchFallback = false;
+    let lastTapTime = 0;
+    
+    let audioCtx = null;
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        function playTone(freq, dur, type, vol, freqEnd) {
-            if (!audioCtx) return;
+    }
+    function playSound(freq, dur, type, vol, freqEnd) {
+        if (!audioCtx) return;
+        try {
             const now = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = type || 'sawtooth';
             osc.frequency.setValueAtTime(freq, now);
-            if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, now + dur);
-            gain.gain.setValueAtTime(vol || 0.15, now);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+            if (freqEnd) osc.frequency.exponentialRampToValueAtTime(Math.max(freqEnd,20), now+dur);
+            gain.gain.setValueAtTime(vol || 0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now+dur);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start();
-            osc.stop(now + dur);
+            osc.stop(now+dur);
+        } catch(e) {}
+    }
+    const SFX = {
+        shoot: () => { playSound(880,0.06,'sawtooth',0.1,220); playSound(1320,0.04,'square',0.05,440); },
+        hit: () => { playSound(280,0.12,'sine',0.15,60); playSound(560,0.08,'square',0.06,100); },
+        critical: () => { playSound(440,0.15,'sine',0.12,880); playSound(880,0.1,'square',0.08,1760); },
+        damage: () => { playSound(100,0.25,'sawtooth',0.18,40); playSound(180,0.15,'square',0.1,60); },
+        reload: () => { setTimeout(()=>playSound(440,0.05,'square',0.06),0); setTimeout(()=>playSound(550,0.05,'square',0.06),100); setTimeout(()=>playSound(660,0.05,'square',0.06),200); setTimeout(()=>playSound(880,0.08,'square',0.08),300); },
+        powerup: () => { playSound(220,0.15,'sine',0.1,880); setTimeout(()=>playSound(440,0.15,'sine',0.1,1320),100); setTimeout(()=>playSound(660,0.2,'sine',0.12,1760),200); },
+        wave: () => { playSound(180,0.3,'sine',0.1,400); setTimeout(()=>playSound(280,0.25,'sine',0.08,560),150); setTimeout(()=>playSound(400,0.2,'sine',0.06,720),300); },
+        gameOver: () => { playSound(440,0.5,'sawtooth',0.15,55); setTimeout(()=>playSound(220,0.5,'square',0.1,27),200); }
+    };
+    
+    function initAmmoBar() {
+        ammoBar.innerHTML = '';
+        for(let i=0;i<CONFIG.MAX_AMMO;i++){
+            const pip = document.createElement('div');
+            pip.className = 'ammo-pip';
+            ammoBar.appendChild(pip);
         }
-        function sndShoot() { playTone(900, 0.08, 'sawtooth', 0.12, 200); playTone(1200, 0.05, 'square', 0.06, 400); }
-        function sndHit() { playTone(300, 0.15, 'sine', 0.15, 80); playTone(600, 0.1, 'square', 0.05, 100); }
-        function sndDamage() { playTone(80, 0.3, 'sawtooth', 0.2, 40); playTone(150, 0.2, 'square', 0.1, 30); }
-        function sndReload() { setTimeout(()=>playTone(500,0.06,'square',0.08),0); setTimeout(()=>playTone(600,0.06,'square',0.08),120); setTimeout(()=>playTone(800,0.1,'square',0.1),240); }
-        function sndWave() { playTone(200,0.4,'sine',0.12,400); setTimeout(()=>playTone(300,0.3,'sine',0.1,600),200); }
-
-        // ---------- Ammo bar ----------
-        function initAmmoBar() {
-            ammoBar.innerHTML = '';
-            for (let i = 0; i < MAX_AMMO; i++) {
-                const pip = document.createElement('div');
-                pip.className = 'ammo-pip';
-                ammoBar.appendChild(pip);
+    }
+    function updateAmmoBar() {
+        const pips = ammoBar.querySelectorAll('.ammo-pip');
+        pips.forEach((p,i)=> p.classList.toggle('empty', i>=ammo));
+        ammoCount.textContent = `${ammo} / ${CONFIG.MAX_AMMO}`;
+    }
+    function updateHealthUI() {
+        const percent = (health/CONFIG.MAX_HEALTH)*100;
+        hpFill.style.width = percent+'%';
+        hpText.textContent = Math.floor(health);
+        hpFill.classList.toggle('low', health<=30);
+    }
+    function updateScoreUI() { scoreDisplay.textContent = score; }
+    function showHitText(text, critical) {
+        const el = document.createElement('div');
+        el.className = 'hit-text'+(critical?' critical':'');
+        el.textContent = text;
+        document.body.appendChild(el);
+        setTimeout(()=>el.remove(),700);
+    }
+    function showPowerupNotification(text) {
+        const el = document.createElement('div');
+        el.className = 'hit-text';
+        el.style.color = '#ffcc00';
+        el.style.borderColor = '#ffcc00';
+        el.textContent = text;
+        document.body.appendChild(el);
+        setTimeout(()=>el.remove(),1500);
+    }
+    
+    function createExplosion(pos, color, count) {
+        const col = color || new BABYLON.Color3(0,1,0.8);
+        const cnt = count||15;
+        for(let i=0;i<cnt;i++){
+            const vel = new BABYLON.Vector3(
+                (Math.random()-0.5)*0.4,
+                (Math.random()-0.5)*0.4,
+                (Math.random()-0.5)*0.4
+            );
+            const sphere = BABYLON.MeshBuilder.CreateSphere('p', {diameter:0.05}, scene);
+            sphere.position = pos.clone();
+            sphere.material = new BABYLON.StandardMaterial('pm', scene);
+            sphere.material.emissiveColor = new BABYLON.Color3(
+                col.r + (Math.random()-0.5)*0.3,
+                col.g + (Math.random()-0.5)*0.3,
+                col.b + (Math.random()-0.5)*0.3
+            );
+            sphere.material.disableLighting = true;
+            particles.push({mesh:sphere, vel:vel, life:25, maxLife:25});
+        }
+    }
+    function updateParticles() {
+        for(let i=particles.length-1;i>=0;i--){
+            const p = particles[i];
+            p.life--;
+            p.mesh.position.addInPlace(p.vel);
+            p.vel.scaleInPlace(0.98);
+            p.mesh.material.alpha = p.life/p.maxLife;
+            p.mesh.scaling.scaleInPlace(0.97);
+            if(p.life<=0){
+                p.mesh.dispose();
+                particles.splice(i,1);
             }
         }
-        function updateAmmoBar() {
-            const pips = ammoBar.querySelectorAll('.ammo-pip');
-            pips.forEach((p, i) => p.classList.toggle('empty', i >= ammo));
-        }
-
-        // ---------- Health UI ----------
-        function updateHealthUI() {
-            const percent = (health / MAX_HEALTH) * 100;
-            hpFill.style.width = percent + '%';
-            hpNum.textContent = Math.floor(health);
-            if (health <= 30) hpFill.classList.add('low');
-            else hpFill.classList.remove('low');
-        }
-
-        function takeDamage(amount) {
-            if (!gameActive) return;
-            health = Math.max(0, health - amount);
-            updateHealthUI();
-            sndDamage();
-            const flash = document.createElement('div');
-            flash.className = 'damage-flash';
-            document.body.appendChild(flash);
-            setTimeout(() => flash.remove(), 300);
-            if (navigator.vibrate) navigator.vibrate(80);
-            if (health <= 0) gameOver();
-        }
-
-        // ---------- Enemy: low-poly sphere with wireframe and core ----------
-        function createEnemy(pos) {
-            const group = new BABYLON.Mesh("enemyGroup", scene);
-            const body = BABYLON.MeshBuilder.CreateSphere("body", { diameter: 0.65 }, scene);
-            const matBody = new BABYLON.StandardMaterial("bodyMat", scene);
-            matBody.diffuseColor = new BABYLON.Color3(0.8, 0.1, 0.1);
-            matBody.emissiveColor = new BABYLON.Color3(0.4, 0, 0);
-            matBody.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
-            body.material = matBody;
-            body.parent = group;
-            
-            const wireMat = new BABYLON.StandardMaterial("wireMat", scene);
-            wireMat.emissiveColor = new BABYLON.Color3(1, 0.2, 0.2);
-            wireMat.wireframe = true;
-            const wire = BABYLON.MeshBuilder.CreateSphere("wire", { diameter: 0.72 }, scene);
-            wire.material = wireMat;
-            wire.parent = group;
-            
-            const core = BABYLON.MeshBuilder.CreateSphere("core", { diameter: 0.25 }, scene);
-            const coreMat = new BABYLON.StandardMaterial("coreMat", scene);
-            coreMat.emissiveColor = new BABYLON.Color3(1, 0.4, 0.4);
-            coreMat.emissiveIntensity = 0.8;
-            core.material = coreMat;
-            core.parent = group;
-            
-            group.position = pos;
-            group.userData = {
-                speed: 0.028 + Math.random() * 0.015,
-                hp: 1,
-                core: core,
-                wire: wire,
-                phase: Math.random() * Math.PI * 2
-            };
-            return group;
-        }
-
-        function spawnEnemy() {
-            const radius = 5 + Math.random() * 4;
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
-            const x = radius * Math.sin(phi) * Math.cos(theta);
-            const y = radius * Math.sin(phi) * Math.sin(theta) * 0.7;
-            const z = radius * Math.cos(phi);
-            const pos = new BABYLON.Vector3(x, y, z);
-            const enemy = createEnemy(pos);
-            enemies.push(enemy);
-            enemyCountEl.textContent = enemies.length;
-        }
-
-        function startWave() {
-            wave++;
-            waveAlert.textContent = `WAVE ${wave}`;
-            waveAlert.classList.add('show');
-            sndWave();
-            setTimeout(() => waveAlert.classList.remove('show'), 1000);
-            const count = Math.min(5 + Math.floor(wave * 0.7), 14);
-            for (let i = 0; i < count; i++) {
-                setTimeout(() => { if (gameActive) spawnEnemy(); }, i * 250);
+    }
+    
+    const ENEMY_TYPES = {
+        basic: { color: new BABYLON.Color3(0.9,0.15,0.15), emissive: new BABYLON.Color3(0.5,0,0), speed:0.025, hp:1, size:0.55, score:100 },
+        fast: { color: new BABYLON.Color3(0.95,0.6,0.1), emissive: new BABYLON.Color3(0.6,0.3,0), speed:0.045, hp:1, size:0.4, score:150 },
+        tank: { color: new BABYLON.Color3(0.6,0.1,0.6), emissive: new BABYLON.Color3(0.35,0,0.35), speed:0.015, hp:3, size:0.75, score:300 },
+        elite: { color: new BABYLON.Color3(0.1,0.8,0.9), emissive: new BABYLON.Color3(0,0.5,0.55), speed:0.035, hp:2, size:0.5, score:250 }
+    };
+    
+    function createEnemy(pos, type) {
+        const cfg = ENEMY_TYPES[type];
+        const group = new BABYLON.TransformNode('enemy', scene);
+        const core = BABYLON.MeshBuilder.CreateIcoSphere('core', {radius: cfg.size*0.5, subdivisions:2}, scene);
+        const coreMat = new BABYLON.StandardMaterial('coreMat', scene);
+        coreMat.diffuseColor = cfg.color;
+        coreMat.emissiveColor = cfg.emissive;
+        core.material = coreMat;
+        core.parent = group;
+        const shell = BABYLON.MeshBuilder.CreateIcoSphere('shell', {radius: cfg.size*0.65, subdivisions:1}, scene);
+        const shellMat = new BABYLON.StandardMaterial('shellMat', scene);
+        shellMat.emissiveColor = cfg.emissive;
+        shellMat.wireframe = true;
+        shell.material = shellMat;
+        shell.parent = group;
+        const ring = BABYLON.MeshBuilder.CreateTorus('ring', {diameter: cfg.size*1.3, thickness:0.02, tessellation:24}, scene);
+        const ringMat = new BABYLON.StandardMaterial('ringMat', scene);
+        ringMat.emissiveColor = cfg.color;
+        ring.material = ringMat;
+        ring.parent = group;
+        group.position = pos;
+        group.metadata = { type, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, score: cfg.score, core, shell, ring, phase: Math.random()*Math.PI*2 };
+        return group;
+    }
+    
+    function spawnEnemy() {
+        if(enemies.length>=CONFIG.MAX_ENEMIES) return;
+        let type = 'basic';
+        const r = Math.random();
+        if(wave>=5 && r<0.15) type='elite';
+        else if(wave>=3 && r<0.25) type='tank';
+        else if(wave>=2 && r<0.4) type='fast';
+        const rad = 5+Math.random()*4;
+        const theta = Math.random()*Math.PI*2;
+        const phi = Math.acos(2*Math.random()-1);
+        const pos = new BABYLON.Vector3(
+            rad*Math.sin(phi)*Math.cos(theta),
+            rad*Math.sin(phi)*Math.sin(theta)*0.7,
+            rad*Math.cos(phi)
+        );
+        const enemy = createEnemy(pos, type);
+        enemies.push(enemy);
+        enemyCountSpan.textContent = enemies.length;
+    }
+    
+    function updateEnemies() {
+        const time = performance.now()*0.001;
+        for(let i=enemies.length-1;i>=0;i--){
+            const e = enemies[i];
+            const meta = e.metadata;
+            const dir = e.position.clone().negate();
+            const dist = dir.length();
+            if(dist>0.1){
+                dir.normalize();
+                e.position.addInPlace(dir.multiplyScalar(meta.speed));
+            }
+            const pulse = 1+Math.sin(time*3+meta.phase)*0.08;
+            meta.core.scaling.setAll(pulse);
+            meta.shell.rotation.y += 0.02;
+            meta.shell.rotation.x += 0.015;
+            meta.ring.rotation.z += 0.025;
+            if(dist<1.0){
+                let dmg = (meta.type==='tank'?20:(meta.type==='elite'?15:12));
+                if(activePowerup==='shield') dmg*=0.5;
+                takeDamage(dmg);
+                meta.core.dispose(); meta.shell.dispose(); meta.ring.dispose();
+                e.dispose();
+                enemies.splice(i,1);
+                enemyCountSpan.textContent = enemies.length;
             }
         }
-
-        function updateEnemies() {
-            for (let i = 0; i < enemies.length; i++) {
-                const e = enemies[i];
-                const dir = e.position.clone().negate();
-                const dist = dir.length();
-                if (dist > 0.05) dir.normalize();
-                e.position.addInPlace(dir.multiplyScalar(e.userData.speed));
-                // Animate core and wire
-                const time = Date.now() * 0.004;
-                const scale = 1 + Math.sin(time + e.userData.phase) * 0.1;
-                e.userData.core.scaling = new BABYLON.Vector3(scale, scale, scale);
-                e.userData.wire.rotation.y += 0.03;
-                e.userData.wire.rotation.x += 0.02;
-                // Collision with player
-                if (dist < 1.2) {
-                    e.dispose();
-                    enemies.splice(i,1);
-                    i--;
-                    takeDamage(15);
-                    continue;
+    }
+    
+    function destroyEnemy(enemy, killed) {
+        const idx = enemies.indexOf(enemy);
+        if(idx===-1) return;
+        const meta = enemy.metadata;
+        createExplosion(enemy.position, ENEMY_TYPES[meta.type].color, 18);
+        if(killed){
+            const now = Date.now();
+            if(now-lastKillTime<CONFIG.COMBO_TIMEOUT) combo++;
+            else combo=1;
+            lastKillTime = now;
+            const mult = Math.min(combo,10);
+            const gain = meta.score * mult;
+            score += gain;
+            updateScoreUI();
+            if(combo>=5){
+                SFX.critical();
+                showHitText(`x${mult} CRITICAL +${gain}`, true);
+            } else {
+                SFX.hit();
+                showHitText(`+${gain}`, false);
+            }
+            if(Math.random()<0.12 && powerups.length<2) spawnPowerup(enemy.position.clone());
+            if(navigator.vibrate) navigator.vibrate(30);
+        }
+        meta.core.dispose(); meta.shell.dispose(); meta.ring.dispose();
+        enemy.dispose();
+        enemies.splice(idx,1);
+        enemyCountSpan.textContent = enemies.length;
+    }
+    
+    const POWERUP_TYPES = {
+        rapidFire: { name:'DISPARO RAPIDO', duration:8000, color:new BABYLON.Color3(1,0.7,0) },
+        shield: { name:'ESCUDO', duration:10000, color:new BABYLON.Color3(0.3,0.6,1) },
+        health: { name:'+30 SALUD', duration:0, color:new BABYLON.Color3(0,1,0.5) },
+        ammo: { name:'MUNICION INFINITA', duration:6000, color:new BABYLON.Color3(1,0.3,0.8) }
+    };
+    
+    function spawnPowerup(pos) {
+        const types = Object.keys(POWERUP_TYPES);
+        const type = types[Math.floor(Math.random()*types.length)];
+        const cfg = POWERUP_TYPES[type];
+        const mesh = BABYLON.MeshBuilder.CreateIcoSphere('pup', {radius:0.25}, scene);
+        mesh.position = pos;
+        const mat = new BABYLON.StandardMaterial('pupMat', scene);
+        mat.emissiveColor = cfg.color;
+        mat.disableLighting = true;
+        mesh.material = mat;
+        mesh.metadata = { type, spawnTime: performance.now() };
+        powerups.push(mesh);
+    }
+    
+    function updatePowerups() {
+        const now = performance.now();
+        for(let i=powerups.length-1;i>=0;i--){
+            const p = powerups[i];
+            p.rotation.y += 0.03;
+            p.rotation.x += 0.02;
+            const s = 1+Math.sin(now*0.003+i)*0.15;
+            p.scaling.setAll(s);
+            if(now - p.metadata.spawnTime > 15000){
+                p.dispose();
+                powerups.splice(i,1);
+                continue;
+            }
+            if(camera && BABYLON.Vector3.Distance(p.position, camera.position)<1.3){
+                collectPowerup(p, i);
+            }
+        }
+    }
+    
+    function collectPowerup(p, idx) {
+        const type = p.metadata.type;
+        const cfg = POWERUP_TYPES[type];
+        SFX.powerup();
+        showPowerupNotification(cfg.name);
+        if(powerupTimer){ clearTimeout(powerupTimer); activePowerup=null; powerupStatus.classList.remove('active'); }
+        switch(type){
+            case 'health': health = Math.min(CONFIG.MAX_HEALTH, health+30); updateHealthUI(); break;
+            case 'rapidFire': activePowerup='rapidFire'; powerupStatus.textContent='DISPARO RAPIDO'; powerupStatus.style.color='#ffcc00'; powerupStatus.classList.add('active'); powerupTimer=setTimeout(()=>{ activePowerup=null; powerupStatus.classList.remove('active'); }, cfg.duration); break;
+            case 'shield': activePowerup='shield'; powerupStatus.textContent='ESCUDO'; powerupStatus.style.color='#44aaff'; powerupStatus.classList.add('active'); updateHealthUI(); powerupTimer=setTimeout(()=>{ activePowerup=null; powerupStatus.classList.remove('active'); updateHealthUI(); }, cfg.duration); break;
+            case 'ammo': activePowerup='ammo'; powerupStatus.textContent='MUNICION INF.'; powerupStatus.style.color='#ff66aa'; powerupStatus.classList.add('active'); powerupTimer=setTimeout(()=>{ activePowerup=null; powerupStatus.classList.remove('active'); }, cfg.duration); break;
+        }
+        p.dispose();
+        powerups.splice(idx,1);
+        if(navigator.vibrate) navigator.vibrate([20,30,20]);
+    }
+    
+    function startWave() {
+        wave++;
+        waveCleared = false;
+        waveNumSpan.textContent = wave;
+        waveAlert.textContent = `WAVE ${wave}`;
+        waveAlert.classList.add('show');
+        SFX.wave();
+        setTimeout(()=>waveAlert.classList.remove('show'),1800);
+        const count = Math.min(4 + Math.floor(wave*1.2), 15);
+        for(let i=0;i<count;i++) setTimeout(()=>{ if(gameActive) spawnEnemy(); }, i*300);
+    }
+    
+    function checkWaveComplete() {
+        if(enemies.length===0 && !waveCleared && gameActive){
+            waveCleared = true;
+            setTimeout(()=>{ if(gameActive) startWave(); }, CONFIG.WAVE_DELAY);
+        }
+    }
+    
+    function shoot() {
+        if(!gameActive || isReloading || !canShoot) return;
+        if(activePowerup!=='ammo' && ammo<=0){ reload(); return; }
+        canShoot = false;
+        const cd = activePowerup==='rapidFire' ? CONFIG.SHOOT_COOLDOWN*0.4 : CONFIG.SHOOT_COOLDOWN;
+        setTimeout(()=> canShoot = true, cd);
+        SFX.shoot();
+        const muzzle = document.createElement('div');
+        muzzle.className = 'muzzle';
+        document.body.appendChild(muzzle);
+        setTimeout(()=>muzzle.remove(),80);
+        if(activePowerup!=='ammo'){ ammo--; updateAmmoBar(); }
+        if(camera){
+            const ray = camera.getForwardRay();
+            let closest = null, closestDist = Infinity;
+            for(const enemy of enemies){
+                const pos = enemy.getAbsolutePosition();
+                const dist = BABYLON.Vector3.Distance(camera.position, pos);
+                const size = ENEMY_TYPES[enemy.metadata.type].size;
+                const dirToEnemy = pos.subtract(camera.position);
+                const proj = ray.direction.scale(BABYLON.Vector3.Dot(dirToEnemy, ray.direction));
+                const closestPoint = camera.position.add(proj);
+                const distToRay = BABYLON.Vector3.Distance(pos, closestPoint);
+                if(distToRay < size && dist < closestDist && dist>0.5){
+                    closestDist = dist;
+                    closest = enemy;
                 }
             }
-            enemyCountEl.textContent = enemies.length;
-            if (enemies.length === 0 && !waveCooldown && gameActive) {
-                waveCooldown = true;
-                sysMsg.textContent = `[SYS] WAVE ${wave} CLEARED`;
-                setTimeout(() => {
-                    if (gameActive) {
-                        waveCooldown = false;
-                        startWave();
-                    }
-                }, 2500);
-            }
-        }
-
-        // ---------- Shooting ----------
-        function shoot() {
-            if (!gameActive || isReloading || !canShoot) return;
-            if (ammo <= 0) { reload(); return; }
-            canShoot = false;
-            setTimeout(() => canShoot = true, 150);
-            sndShoot();
-            // Muzzle flash
-            const muzzle = document.createElement('div');
-            muzzle.className = 'muzzle';
-            document.body.appendChild(muzzle);
-            setTimeout(() => muzzle.remove(), 100);
-            // Raycast
-            const ray = new BABYLON.Ray(camera.position, camera.getForwardRay().direction);
-            let hitEnemy = null;
-            let hitDist = Infinity;
-            for (let enemy of enemies) {
-                const boundingSphere = enemy.getBoundingInfo().boundingSphere;
-                const centerWorld = enemy.getAbsolutePosition();
-                const sphere = new BABYLON.BoundingSphere(centerWorld, boundingSphere.radiusWorld);
-                const distance = ray.intersectsSphere(sphere);
-                if (distance && distance < hitDist) {
-                    hitDist = distance;
-                    hitEnemy = enemy;
+            if(closest){
+                const meta = closest.metadata;
+                meta.hp--;
+                if(meta.core && meta.core.material){
+                    meta.core.material.emissiveColor = new BABYLON.Color3(1,1,1);
+                    setTimeout(()=>{ if(meta.core && meta.core.material) meta.core.material.emissiveColor = ENEMY_TYPES[meta.type].emissive; },50);
+                }
+                if(meta.hp<=0){
+                    destroyEnemy(closest, true);
+                } else {
+                    createExplosion(closest.position, new BABYLON.Color3(1,0.5,0.5), 5);
                 }
             }
-            if (hitEnemy) {
-                const idx = enemies.indexOf(hitEnemy);
-                if (idx !== -1) {
-                    hitEnemy.dispose();
-                    enemies.splice(idx, 1);
-                    score += 100;
-                    updateUI();
-                    sndHit();
-                    const hitDiv = document.createElement('div');
-                    hitDiv.className = 'hit-effect';
-                    hitDiv.textContent = '+100';
-                    document.body.appendChild(hitDiv);
-                    setTimeout(() => hitDiv.remove(), 800);
-                    if (navigator.vibrate) navigator.vibrate(30);
-                }
-            }
-            ammo--;
-            updateUI();
-            if (ammo === 0) reload();
         }
-
-        function reload() {
-            if (isReloading) return;
-            isReloading = true;
-            reloadInd.style.display = 'flex';
-            sndReload();
-            setTimeout(() => {
-                ammo = MAX_AMMO;
-                isReloading = false;
-                reloadInd.style.display = 'none';
-                updateUI();
-            }, 1200);
-        }
-
-        function updateUI() {
-            scoreEl.textContent = score;
-            ammoEl.textContent = `${ammo} / ${MAX_AMMO}`;
+        if(activePowerup!=='ammo' && ammo===0) reload();
+    }
+    
+    function reload() {
+        if(isReloading) return;
+        isReloading = true;
+        reloadIndicator.style.display = 'flex';
+        SFX.reload();
+        setTimeout(()=>{
+            ammo = CONFIG.MAX_AMMO;
+            isReloading = false;
+            reloadIndicator.style.display = 'none';
             updateAmmoBar();
+        }, CONFIG.RELOAD_TIME);
+    }
+    
+    function takeDamage(amount) {
+        if(!gameActive) return;
+        health = Math.max(0, health-amount);
+        updateHealthUI();
+        SFX.damage();
+        const flash = document.createElement('div');
+        flash.className = 'damage-flash';
+        document.body.appendChild(flash);
+        setTimeout(()=>flash.remove(),250);
+        if(navigator.vibrate) navigator.vibrate([50,30,50]);
+        combo=0;
+        if(health<=0) gameOver();
+    }
+    
+    function gameOver() {
+        gameActive = false;
+        SFX.gameOver();
+        if(score>highscore){ highscore=score; localStorage.setItem('neoproxy_highscore', highscore); }
+        finalScore.textContent = `PUNTUACION: ${score}`;
+        highscoreDisplay.textContent = `RECORD: ${highscore}`;
+        gameoverScreen.style.display = 'flex';
+    }
+    
+    function restartGame() {
+        health = CONFIG.MAX_HEALTH;
+        score = 0; ammo = CONFIG.MAX_AMMO; wave = 0; combo = 0;
+        isReloading = false; canShoot = true; waveCleared = false;
+        enemies.forEach(e=>{ try{ e.dispose(); }catch(e){} });
+        enemies = [];
+        powerups.forEach(p=>p.dispose());
+        powerups = [];
+        particles.forEach(p=>p.mesh.dispose());
+        particles = [];
+        if(powerupTimer) clearTimeout(powerupTimer);
+        activePowerup = null;
+        powerupStatus.classList.remove('active');
+        updateHealthUI(); updateScoreUI(); updateAmmoBar();
+        gameoverScreen.style.display = 'none';
+        gameActive = true;
+        startWave();
+    }
+    
+    function initTouchControls() {
+        useTouchFallback = true;
+        camera = new BABYLON.UniversalCamera('cam', BABYLON.Vector3.Zero(), scene);
+        camera.attachControl(document.getElementById('renderCanvas'), false);
+        camera.inputs.attached.mouse.detachControl();
+        let dragging = false, lastX=0, lastY=0;
+        const canvas = document.getElementById('renderCanvas');
+        canvas.addEventListener('touchstart', (e)=>{ if(gameActive){ dragging=true; lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; } }, {passive:true});
+        canvas.addEventListener('touchmove', (e)=>{
+            if(!gameActive || !dragging) return;
+            e.preventDefault();
+            const dx = e.touches[0].clientX - lastX;
+            const dy = e.touches[0].clientY - lastY;
+            camera.rotation.y += dx * 0.004;
+            camera.rotation.x += dy * 0.004;
+            camera.rotation.x = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, camera.rotation.x));
+            lastX = e.touches[0].clientX;
+            lastY = e.touches[0].clientY;
+        }, {passive:false});
+        canvas.addEventListener('touchend', ()=> dragging=false);
+        gyroStatus.textContent = 'INPUT: TACTIL';
+        controlHint.textContent = 'ARRASTRA PARA GIRAR';
+    }
+    
+    async function initBabylon() {
+        const canvas = document.getElementById('renderCanvas');
+        engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: false });
+        scene = new BABYLON.Scene(engine);
+        scene.clearColor = new BABYLON.Color4(0,0,0,0);
+        try {
+            camera = new BABYLON.DeviceOrientationCamera('cam', BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(canvas, true);
+            gyroStatus.textContent = 'SENSOR: ACTIVO';
+            controlHint.textContent = 'GIRA EL DISPOSITIVO';
+            useTouchFallback = false;
+        } catch(e) {
+            console.warn('DeviceOrientationCamera fallback', e);
+            initTouchControls();
         }
-
-        function gameOver() {
-            gameActive = false;
-            document.getElementById('final-score').textContent = `PUNTUACIÓN: ${score}`;
-            gameoverScreen.style.display = 'flex';
+        const hemi = new BABYLON.HemisphericLight('hemi', BABYLON.Vector3.Up(), scene);
+        hemi.intensity = 0.5;
+        const dir = new BABYLON.DirectionalLight('dir', new BABYLON.Vector3(1,-1,0.5), scene);
+        dir.intensity = 0.6;
+        const grid = BABYLON.MeshBuilder.CreateGround('grid', {width:24,height:24,subdivisions:2}, scene);
+        grid.position.y = -2.5;
+        const gridMat = new BABYLON.StandardMaterial('gridMat', scene);
+        gridMat.wireframe = true;
+        gridMat.emissiveColor = new BABYLON.Color3(0,0.35,0.3);
+        grid.material = gridMat;
+        grid.visibility = 0.25;
+        for(let i=0;i<80;i++){
+            const p = BABYLON.MeshBuilder.CreateSphere('ap'+i, {diameter:0.04}, scene);
+            const r = 5+Math.random()*8;
+            const theta = Math.random()*Math.PI*2;
+            const phi = Math.acos(2*Math.random()-1);
+            p.position = new BABYLON.Vector3(r*Math.sin(phi)*Math.cos(theta), r*Math.sin(phi)*Math.sin(theta)*0.6, r*Math.cos(phi));
+            const mat = new BABYLON.StandardMaterial('apm', scene);
+            mat.emissiveColor = new BABYLON.Color3(0.2+Math.random()*0.3,0.6+Math.random()*0.4,0.5+Math.random()*0.3);
+            mat.alpha = 0.4;
+            p.material = mat;
         }
-
-        function restart() {
-            health = MAX_HEALTH;
-            score = 0;
-            ammo = MAX_AMMO;
-            wave = 0;
-            waveCooldown = false;
-            enemies.forEach(e => e.dispose());
-            enemies = [];
-            updateHealthUI();
-            updateUI();
-            gameoverScreen.style.display = 'none';
-            gameActive = true;
-            startWave();
+    }
+    
+    function calibrateCamera() {
+        if(camera){
+            camera.rotation = BABYLON.Vector3.Zero();
+            gyroStatus.textContent = 'CALIBRADO';
+            setTimeout(()=>{ gyroStatus.textContent = useTouchFallback ? 'INPUT: TACTIL' : 'SENSOR: ACTIVO'; },1000);
         }
-
-        // ---------- Camera and gyroscope ----------
-        function calibrateCamera() {
-            if (camera) {
-                camera.rotation.y = 0;
-                camera.rotation.x = 0;
-                cameraRotation.y = 0;
-                cameraRotation.x = 0;
-                gyroStatus.textContent = 'CALIBRADO';
-                setTimeout(() => {
-                    if (gameActive) gyroStatus.textContent = useTouchFallback ? 'INPUT: TÁCTIL' : 'SENSOR: ACTIVO';
-                }, 1000);
-            }
-        }
-
-        function initTouchFallback() {
-            useTouchFallback = true;
-            ctrlHint.textContent = 'ARRASTRAR: GIRAR | TOCAR: DISPARAR';
-            gyroStatus.textContent = 'INPUT: TÁCTIL';
-            const canvas = document.getElementById('renderCanvas');
-            let isDragging = false;
-            let lastX = 0, lastY = 0;
-            canvas.addEventListener('touchstart', (e) => {
-                if (!gameActive) return;
-                isDragging = true;
-                lastX = e.touches[0].clientX;
-                lastY = e.touches[0].clientY;
-                e.preventDefault();
-            });
-            canvas.addEventListener('touchmove', (e) => {
-                if (!gameActive || !isDragging) return;
-                const dx = e.touches[0].clientX - lastX;
-                const dy = e.touches[0].clientY - lastY;
-                if (camera) {
-                    camera.rotation.y += dx * 0.005;
-                    camera.rotation.x += dy * 0.005;
-                    camera.rotation.x = Math.min(Math.PI/2.2, Math.max(-Math.PI/2.2, camera.rotation.x));
-                }
-                lastX = e.touches[0].clientX;
-                lastY = e.touches[0].clientY;
-                e.preventDefault();
-            });
-            canvas.addEventListener('touchend', () => isDragging = false);
-            // Mouse
-            let mouseDown = false;
-            canvas.addEventListener('mousedown', (e) => { if (gameActive) mouseDown = true; });
-            canvas.addEventListener('mousemove', (e) => {
-                if (!gameActive || !mouseDown) return;
-                if (camera) {
-                    camera.rotation.y += e.movementX * 0.005;
-                    camera.rotation.x += e.movementY * 0.005;
-                    camera.rotation.x = Math.min(Math.PI/2.2, Math.max(-Math.PI/2.2, camera.rotation.x));
-                }
-            });
-            canvas.addEventListener('mouseup', () => mouseDown = false);
-        }
-
-        // ---------- Babylon.js scene ----------
-        async function initBabylon() {
-            const canvas = document.getElementById('renderCanvas');
-            engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: false });
-            scene = new BABYLON.Scene(engine);
-            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
-            scene.autoClear = true;
-            
-            // Camera: DeviceOrientationCamera for true AR
+    }
+    
+    async function initCameraFeed() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
+            video.srcObject = stream;
+            return true;
+        } catch(e){
             try {
-                camera = new BABYLON.DeviceOrientationCamera("arCamera", new BABYLON.Vector3(0, 0, 0), scene);
-                camera.angularSensibility = 5000;
-                camera.inputs.add(new BABYLON.DeviceOrientationCameraInput());
-                camera.attachControl(canvas, true);
-                gyroStatus.textContent = 'SENSOR: ACTIVO';
-                ctrlHint.textContent = 'GIROSCOPIO: ACTIVO';
-                useTouchFallback = false;
-            } catch(e) {
-                console.warn("DeviceOrientationCamera fallback to touch", e);
-                useTouchFallback = true;
-                camera = new BABYLON.UniversalCamera("cam", new BABYLON.Vector3(0, 0, 0), scene);
-                camera.attachControl(canvas, true);
-                initTouchFallback();
-            }
-            
-            // Lighting
-            const hemiLight = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
-            hemiLight.intensity = 0.6;
-            const dirLight = new BABYLON.DirectionalLight("dir", new BABYLON.Vector3(1, -1, 0.5), scene);
-            dirLight.intensity = 0.8;
-            
-            // Reference grid
-            const grid = BABYLON.MeshBuilder.CreateGround("grid", { width: 20, height: 20, subdivisions: 2 }, scene);
-            const gridMat = new BABYLON.StandardMaterial("gridMat", scene);
-            gridMat.wireframe = true;
-            gridMat.emissiveColor = new BABYLON.Color3(0.2, 0.5, 0.2);
-            grid.material = gridMat;
-            grid.position.y = -2;
-            grid.visibility = 0.3;
-            
-            // Floating particles (atmosphere)
-            const particleCount = 400;
-            for (let i = 0; i < particleCount; i++) {
-                const sphere = BABYLON.MeshBuilder.CreateSphere("p"+i, { diameter: 0.06 }, scene);
-                const r = 4 + Math.random() * 6;
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-                sphere.position.x = r * Math.sin(phi) * Math.cos(theta);
-                sphere.position.y = r * Math.sin(phi) * Math.sin(theta) * 0.6;
-                sphere.position.z = r * Math.cos(phi);
-                const mat = new BABYLON.StandardMaterial("pMat"+i, scene);
-                mat.emissiveColor = new BABYLON.Color3(Math.random()*0.5+0.3, Math.random()*0.8+0.2, Math.random()*0.8+0.2);
-                mat.alpha = 0.5;
-                sphere.material = mat;
-            }
-        }
-
-        // ---------- Camera feed ----------
-        async function initCameraFeed() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
                 return true;
-            } catch(e) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    video.srcObject = stream;
-                    return true;
-                } catch(e2) {
-                    video.style.display = 'none';
-                    return false;
-                }
-            }
-        }
-
-        // ---------- Events ----------
-        function attachEvents() {
-            const canvas = document.getElementById('renderCanvas');
-            canvas.addEventListener('touchstart', (e) => {
-                const now = Date.now();
-                if (now - lastTapTime < 250) {
-                    calibrateCamera();
-                    e.preventDefault();
-                } else {
-                    shoot();
-                }
-                lastTapTime = now;
-            });
-            canvas.addEventListener('click', (e) => {
-                if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
-                shoot();
-            });
-            window.addEventListener('keydown', (e) => {
-                if (e.key === 'r' || e.key === 'R') reload();
-                if (e.key === 'c' || e.key === 'C') calibrateCamera();
-                if (e.key === ' ') shoot();
-            });
-        }
-
-        // ---------- Main init with timeout and error handling ----------
-        async function init() {
-            startBtn.textContent = 'CONECTANDO...';
-            startBtn.disabled = true;
-            initAudio();
-            
-            // Timeout to avoid freezing
-            const timeout = setTimeout(() => {
-                console.warn("Camera timeout, continuing without feed");
+            } catch(e2){
                 video.style.display = 'none';
-                proceed();
-            }, 5000);
-            
-            try {
-                await initCameraFeed();
-                clearTimeout(timeout);
-            } catch(err) {
-                clearTimeout(timeout);
-                video.style.display = 'none';
+                return false;
             }
-            
-            async function proceed() {
-                try {
-                    await initBabylon();
-                } catch(err) {
-                    console.error("Babylon init failed", err);
-                    startBtn.disabled = false;
-                    startBtn.textContent = "REINTENTAR";
-                    return;
-                }
-                attachEvents();
-                initAmmoBar();
-                updateHealthUI();
-                updateUI();
-                startScreen.style.display = 'none';
-                gameActive = true;
-                startWave();
-                engine.runRenderLoop(() => {
-                    if (scene && gameActive) {
-                        updateEnemies();
-                        scene.render();
-                    } else if (scene) {
-                        scene.render();
-                    }
-                });
-                window.addEventListener('resize', () => engine.resize());
-            }
-            proceed();
         }
-        
-        startBtn.addEventListener('click', init);
-        restartBtn.addEventListener('click', restart);
-    })();
+    }
+    
+    function attachEvents() {
+        const canvas = document.getElementById('renderCanvas');
+        canvas.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if(now - lastTapTime < 250) calibrateCamera();
+            else shoot();
+            lastTapTime = now;
+        });
+        canvas.addEventListener('click', (e) => {
+            if(e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
+            shoot();
+        });
+        window.addEventListener('keydown', (e) => {
+            if(e.key === 'r' || e.key === 'R') reload();
+            if(e.key === 'c' || e.key === 'C') calibrateCamera();
+            if(e.key === ' ') shoot();
+        });
+        window.addEventListener('resize', () => engine && engine.resize());
+    }
+    
+    function gameLoop() {
+        if(!scene) return;
+        if(gameActive){
+            updateEnemies();
+            updateParticles();
+            updatePowerups();
+            checkWaveComplete();
+        }
+        scene.render();
+    }
+    
+    async function init() {
+        startBtn.textContent = 'CONECTANDO...';
+        startBtn.disabled = true;
+        initAudio();
+        initAmmoBar();
+        const timeout = setTimeout(()=> video.style.display = 'none', 4000);
+        try { await initCameraFeed(); clearTimeout(timeout); } catch(e){ clearTimeout(timeout); video.style.display = 'none'; }
+        try { await initBabylon(); } catch(e){ console.error(e); startBtn.disabled=false; startBtn.textContent='REINTENTAR'; return; }
+        attachEvents();
+        updateHealthUI(); updateScoreUI(); updateAmmoBar();
+        startScreen.style.display = 'none';
+        gameActive = true;
+        engine.runRenderLoop(gameLoop);
+        setTimeout(startWave, 500);
+    }
+    
+    startBtn.addEventListener('click', init);
+    restartBtn.addEventListener('click', restartGame);
+})();
 </script>
 </body>
 </html>
