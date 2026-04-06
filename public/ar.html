@@ -98,6 +98,78 @@
         let isReloading = false;
         let gameActive = false;
         
+        // ========== TOUCH CONTROLS (FALLBACK) ==========
+        let useTouchControls = false;
+        let isDragging = false;
+        let lastTouchX = 0, lastTouchY = 0;
+        const TOUCH_SENSITIVITY = 0.5;
+        
+        function initTouchControls() {
+            const canvas = document.getElementById('game-canvas');
+            
+            canvas.addEventListener('touchstart', (e) => {
+                if (!gameActive || !useTouchControls) return;
+                isDragging = true;
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+            }, {passive: false});
+            
+            canvas.addEventListener('touchmove', (e) => {
+                if (!gameActive || !useTouchControls || !isDragging) return;
+                e.preventDefault();
+                
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                
+                const deltaX = (touchX - lastTouchX) * TOUCH_SENSITIVITY;
+                const deltaY = (touchY - lastTouchY) * TOUCH_SENSITIVITY;
+                
+                targetRotationY += deltaX * 0.15;
+                targetRotationX += deltaY * 0.15;
+                
+                targetRotationY = Math.min(180, Math.max(-180, targetRotationY));
+                targetRotationX = Math.min(90, Math.max(-90, targetRotationX));
+                
+                lastTouchX = touchX;
+                lastTouchY = touchY;
+                
+                if (gyroDebugEl) {
+                    gyroDebugEl.textContent = `🖐️ TOUCH: yaw:${targetRotationY.toFixed(1)}° pitch:${targetRotationX.toFixed(1)}°`;
+                }
+            }, {passive: false});
+            
+            canvas.addEventListener('touchend', () => {
+                isDragging = false;
+            });
+            
+            // Mouse fallback
+            canvas.addEventListener('mousedown', (e) => {
+                if (!gameActive || !useTouchControls) return;
+                isDragging = true;
+                lastTouchX = e.clientX;
+                lastTouchY = e.clientY;
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                if (!gameActive || !useTouchControls || !isDragging) return;
+                
+                const deltaX = (e.clientX - lastTouchX) * TOUCH_SENSITIVITY;
+                const deltaY = (e.clientY - lastTouchY) * TOUCH_SENSITIVITY;
+                
+                targetRotationY += deltaX * 0.15;
+                targetRotationX += deltaY * 0.15;
+                
+                lastTouchX = e.clientX;
+                lastTouchY = e.clientY;
+            });
+            
+            canvas.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+            
+            console.log('✅ Touch controls initialized');
+        }
+        
         // ========== GYROSCOPE ==========
         let currentRotationX = 0;
         let currentRotationY = 0;
@@ -488,6 +560,20 @@
             
             // Activar giroscopio
             await requestGyroPermission();
+            
+            // Auto-detectar: si en 3 segundos no hay gyro, usar touch
+            setTimeout(() => {
+                if (!gyroEnabled && gameActive) {
+                    console.log('⚠️ Gyro no detectado, activando controles táctiles');
+                    useTouchControls = true;
+                    initTouchControls();
+                    gyroStatusEl.textContent = '🖐️ TOUCH: ACTIVO';
+                    gyroStatusEl.style.color = '#ffaa00';
+                    if (gyroDebugEl) {
+                        gyroDebugEl.textContent = '🖐️ Arrastra para mirar | Toca para disparar';
+                    }
+                }
+            }, 3000);
             
             gameActive = true;
             animate();
