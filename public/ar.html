@@ -57,14 +57,16 @@
 
 <div class="gyro-status" id="gyro-status">⚡ GYRO: ESPERANDO...</div>
 <div class="gyro-debug" id="gyro-debug">📐 yaw:0° pitch:0°</div>
+<div id="raw-debug" style="position: absolute; bottom: 120px; left: 10px; background: black; color: lime; font-size: 10px; padding: 4px; z-index: 3; font-family: monospace;">RAW: γ:0° β:0°</div>
 
 <div id="reload-indicator" class="reload-indicator">⟳ RECARGANDO... ⟳</div>
 
 <div id="start-overlay">
     <h1 style="color:#ff0000; margin-bottom:20px;">NEO·PROXY AR</h1>
     <p style="color:#ff6666; margin-bottom:10px;">REALIDAD AUMENTADA CON GIROSCOPIO</p>
-    <button id="start-button">🎯 INICIAR AR</button>
-    <p style="color:#aa5555; margin-top:20px; font-size:12px;">Permite acceso a la cámara y movimiento</p>
+    <button id="force-gyro-btn" style="margin-top:10px; background:#330000; color:#ff8888; border:1px solid #ff0000; padding:8px 16px; cursor:pointer; font-family:monospace;">📳 FORZAR GIROSCOPIO</button>
+    <button id="start-button" style="margin-top:15px;">🎯 INICIAR AR</button>
+    <p style="color:#aa5555; margin-top:20px; font-size:12px;">Toca FORZAR GIROSCOPIO primero, luego INICIAR AR</p>
 </div>
 
 <div id="game-over">
@@ -89,6 +91,8 @@
         const reloadIndicator = document.getElementById('reload-indicator');
         const gyroStatusEl = document.getElementById('gyro-status');
         const gyroDebugEl = document.getElementById('gyro-debug');
+        const rawDebugEl = document.getElementById('raw-debug');
+        const forceGyroBtn = document.getElementById('force-gyro-btn');
         
         // ========== GAME STATE ==========
         let scene, camera, renderer;
@@ -180,11 +184,22 @@
         let gyroEnabled = false;
         
         function handleOrientation(event) {
+            let gamma = event.gamma;
+            let beta = event.beta;
             
-            // gamma: left-right (-90 a 90) -> YAW
-            // beta: front-back (-180 a 180) -> PITCH
-            let gamma = event.gamma || 0;
-            let beta = event.beta || 0;
+            // Si son null o undefined, intentar con absolute
+            if (gamma === null || gamma === undefined || beta === null || beta === undefined) {
+                if (event.absolute) {
+                    gamma = event.gamma;
+                    beta = event.beta;
+                }
+                if (gamma === null || gamma === undefined || beta === null || beta === undefined) return;
+            }
+            
+            // Mostrar valores RAW en el div
+            if (rawDebugEl) {
+                rawDebugEl.innerHTML = `RAW γ:${gamma.toFixed(1)}° β:${beta.toFixed(1)}°`;
+            }
             
             // Aplicar calibración
             let yaw = (gamma - calibrationX);
@@ -553,27 +568,24 @@
         async function initGame() {
             startBtn.textContent = '⟡ INICIANDO... ⟡';
             startBtn.disabled = true;
+            if (forceGyroBtn) forceGyroBtn.disabled = true;
             
             await initCamera();
             initThree();
             spawnEnemies();
             
-            // Activar giroscopio
-            await requestGyroPermission();
-            
-            // Auto-detectar: si en 3 segundos no hay gyro, usar touch
-            setTimeout(() => {
-                if (!gyroEnabled && gameActive) {
-                    console.log('⚠️ Gyro no detectado, activando controles táctiles');
-                    useTouchControls = true;
-                    initTouchControls();
-                    gyroStatusEl.textContent = '🖐️ TOUCH: ACTIVO';
-                    gyroStatusEl.style.color = '#ffaa00';
-                    if (gyroDebugEl) {
-                        gyroDebugEl.textContent = '🖐️ Arrastra para mirar | Toca para disparar';
-                    }
+            // NO activar giroscopio automáticamente - el botón FORZAR lo hace
+            // Si no se forzó, usar touch controls automáticamente
+            if (!gyroEnabled) {
+                console.log('Gyro no forzado, usando touch controls');
+                useTouchControls = true;
+                initTouchControls();
+                gyroStatusEl.textContent = '🖐️ TOUCH: ACTIVO';
+                gyroStatusEl.style.color = '#ffaa00';
+                if (gyroDebugEl) {
+                    gyroDebugEl.textContent = '🖐️ Arrastra para mirar | Toca para disparar';
                 }
-            }, 3000);
+            }
             
             gameActive = true;
             animate();
@@ -615,6 +627,33 @@
                     gyroStatusEl.textContent = '✅ GYRO: ACTIVO';
                 }
             }, 500);
+        }
+        
+        // ========== FORCE GIROSCOPIO BUTTON ==========
+        if (forceGyroBtn) {
+            forceGyroBtn.addEventListener('click', async () => {
+                console.log('Forzando giroscopio...');
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    try {
+                        const response = await DeviceOrientationEvent.requestPermission();
+                        if (response === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                            alert('✅ Giroscopio activado (iOS)');
+                            gyroStatusEl.textContent = '✅ GYRO: FORZADO (iOS)';
+                        } else {
+                            alert('❌ Permiso denegado');
+                        }
+                    } catch(e) { 
+                        console.error(e); 
+                        window.addEventListener('deviceorientation', handleOrientation);
+                        alert('⚠️ Error, intentando sin permiso');
+                    }
+                } else {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    alert('✅ Listener añadido (Android). Mueve el celular.');
+                    gyroStatusEl.textContent = '✅ GYRO: FORZADO (Android)';
+                }
+            });
         }
         
         startBtn.addEventListener('click', initGame);
