@@ -588,28 +588,46 @@
     }
     
     function updateEnemies() {
-        const time = performance.now()*0.001;
-        for(let i=enemies.length-1;i>=0;i--){
+        const time = performance.now() * 0.001;
+        for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
-            const meta = e.metadata;
-            const dir = e.position.clone().negate();
-            const dist = dir.length();
-            if(dist>0.1){
-                dir.normalize();
-                e.position.addInPlace(dir.multiplyScalar(meta.speed));
+            if (!e || !e.position || e.position === undefined) {
+                enemies.splice(i, 1);
+                continue;
             }
-            const pulse = 1+Math.sin(time*3+meta.phase)*0.08;
-            meta.core.scaling.setAll(pulse);
-            meta.shell.rotation.y += 0.02;
-            meta.shell.rotation.x += 0.015;
-            meta.ring.rotation.z += 0.025;
-            if(dist<1.0){
-                let dmg = (meta.type==='tank'?20:(meta.type==='elite'?15:12));
-                if(activePowerup==='shield') dmg*=0.5;
+            const meta = e.metadata;
+            if (!meta) {
+                enemies.splice(i, 1);
+                continue;
+            }
+            const posX = e.position.x;
+            const posY = e.position.y;
+            const posZ = e.position.z;
+            const dist = Math.sqrt(posX * posX + posY * posY + posZ * posZ);
+            if (dist > 0.05) {
+                const dirX = -posX / dist;
+                const dirY = -posY / dist;
+                const dirZ = -posZ / dist;
+                e.position.x += dirX * meta.speed;
+                e.position.y += dirY * meta.speed;
+                e.position.z += dirZ * meta.speed;
+            }
+            const pulse = 1 + Math.sin(time * 3 + meta.phase) * 0.08;
+            if (meta.core) meta.core.scaling.setAll(pulse);
+            if (meta.shell) {
+                meta.shell.rotation.y += 0.02;
+                meta.shell.rotation.x += 0.015;
+            }
+            if (meta.ring) meta.ring.rotation.z += 0.025;
+            if (dist < 1.0) {
+                let dmg = (meta.type === 'tank' ? 20 : (meta.type === 'elite' ? 15 : 12));
+                if (activePowerup === 'shield') dmg *= 0.5;
                 takeDamage(dmg);
-                meta.core.dispose(); meta.shell.dispose(); meta.ring.dispose();
+                if (meta.core) meta.core.dispose();
+                if (meta.shell) meta.shell.dispose();
+                if (meta.ring) meta.ring.dispose();
                 e.dispose();
-                enemies.splice(i,1);
+                enemies.splice(i, 1);
                 enemyCountSpan.textContent = enemies.length;
             }
         }
@@ -617,31 +635,40 @@
     
     function destroyEnemy(enemy, killed) {
         const idx = enemies.indexOf(enemy);
-        if(idx===-1) return;
+        if (idx === -1) return;
         const meta = enemy.metadata;
-        createExplosion(enemy.position, ENEMY_TYPES[meta.type].color, 18);
-        if(killed){
+        if (!meta) {
+            enemy.dispose();
+            enemies.splice(idx, 1);
+            enemyCountSpan.textContent = enemies.length;
+            return;
+        }
+        const pos = enemy.position.clone();
+        createExplosion(pos, ENEMY_TYPES[meta.type]?.color || new BABYLON.Color3(1,0,0), 18);
+        if (killed) {
             const now = Date.now();
-            if(now-lastKillTime<CONFIG.COMBO_TIMEOUT) combo++;
-            else combo=1;
+            if (now - lastKillTime < CONFIG.COMBO_TIMEOUT) combo++;
+            else combo = 1;
             lastKillTime = now;
-            const mult = Math.min(combo,10);
+            const mult = Math.min(combo, 10);
             const gain = meta.score * mult;
             score += gain;
             updateScoreUI();
-            if(combo>=5){
+            if (combo >= 5) {
                 SFX.critical();
                 showHitText(`x${mult} CRITICAL +${gain}`, true);
             } else {
                 SFX.hit();
                 showHitText(`+${gain}`, false);
             }
-            if(Math.random()<0.12 && powerups.length<2) spawnPowerup(enemy.position.clone());
-            if(navigator.vibrate) navigator.vibrate(30);
+            if (Math.random() < 0.12 && powerups.length < 2) spawnPowerup(enemy.position.clone());
+            if (navigator.vibrate) navigator.vibrate(30);
         }
-        meta.core.dispose(); meta.shell.dispose(); meta.ring.dispose();
+        if (meta.core) meta.core.dispose();
+        if (meta.shell) meta.shell.dispose();
+        if (meta.ring) meta.ring.dispose();
         enemy.dispose();
-        enemies.splice(idx,1);
+        enemies.splice(idx, 1);
         enemyCountSpan.textContent = enemies.length;
     }
     
@@ -790,6 +817,8 @@
         setTimeout(()=>flash.remove(),250);
         if(navigator.vibrate) navigator.vibrate([50,30,50]);
         combo=0;
+        const comboDiv = document.querySelector('.combo-display');
+        if(comboDiv) comboDiv.classList.remove('active');
         if(health<=0) gameOver();
     }
     
@@ -936,6 +965,17 @@
             updateParticles();
             updatePowerups();
             checkWaveComplete();
+            const comboDiv = document.querySelector('.combo-display');
+            if(comboDiv){
+                if(combo>1){
+                    comboDiv.querySelector('#combo-count').textContent = combo;
+                    comboDiv.classList.add('active');
+                    if(combo>=5) comboDiv.classList.add('high');
+                    else comboDiv.classList.remove('high');
+                } else {
+                    comboDiv.classList.remove('active');
+                }
+            }
         }
         scene.render();
     }
@@ -958,6 +998,13 @@
     
     startBtn.addEventListener('click', init);
     restartBtn.addEventListener('click', restartGame);
+    
+    if(!document.querySelector('.combo-display')){
+        const cd = document.createElement('div');
+        cd.className = 'combo-display';
+        cd.innerHTML = 'COMBO x<span id="combo-count">0</span>';
+        document.body.appendChild(cd);
+    }
 })();
 </script>
 </body>
