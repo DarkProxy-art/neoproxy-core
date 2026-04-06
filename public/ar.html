@@ -688,20 +688,40 @@
             periodicUIGlitch();
         }
         
-        // Gyroscope & touch
+        // Gyroscope & touch - ABSOLUTE ORIENTATION (compass mode)
+        let gyroCalibrationAlpha = 0; // Offset para calibrar dirección inicial como "frente"
+        
         function handleOrientation(event) {
             if (!gameActive) return;
-            let gamma = event.gamma || 0;
+            
+            // alpha: 0-360° orientación absoluta respecto al Norte (brújula)
+            // beta: -180 to 180° inclinación frontal (pitch)
+            // gamma: -90 to 90° inclinación lateral (roll)
+            let alpha = event.alpha || 0;
             let beta = event.beta || 0;
-            let yaw = Math.min(90, Math.max(-90, gamma));
-            let pitch = Math.min(60, Math.max(-60, beta));
+            
+            // Si es la primera vez, calibrar la dirección actual como "frente" (0°)
+            if (!gyroEnabled && (Math.abs(alpha) > 0 || Math.abs(beta) > 0)) {
+                gyroCalibrationAlpha = alpha; // Guardar offset inicial
+                gyroEnabled = true;
+                gyroStatusEl.textContent = "SENSOR: ABSOLUTE MODE";
+            }
+            
+            // Calcular yaw relativo a la dirección inicial (frente al jugador)
+            let relativeYaw = alpha - gyroCalibrationAlpha;
+            // Normalizar a -180 a 180
+            if (relativeYaw > 180) relativeYaw -= 360;
+            if (relativeYaw < -180) relativeYaw += 360;
+            
+            // Limitar yaw y pitch
+            let yaw = Math.min(90, Math.max(-90, relativeYaw));
+            let pitch = Math.min(60, Math.max(-60, beta * 0.5)); // Reducir sensibilidad pitch
+            
             targetRotationY = yaw;
             targetRotationX = pitch;
-            if (!gyroEnabled && (Math.abs(gamma) > 0.1 || Math.abs(beta) > 0.1)) {
-                gyroEnabled = true;
-                gyroStatusEl.textContent = "SENSOR: ACTIVE";
-            }
-            gyroDebugEl.textContent = `AZIMUTH: ${yaw.toFixed(0)} | ELEV: ${pitch.toFixed(0)}`;
+            
+            // Debug: mostrar orientación absoluta (brújula) y relativa
+            gyroDebugEl.textContent = `COMPASS: ${alpha.toFixed(0)}° | YAW: ${yaw.toFixed(0)}° | PITCH: ${pitch.toFixed(0)}°`;
         }
         
         function initTouchControls() {
