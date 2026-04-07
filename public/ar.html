@@ -340,11 +340,38 @@
             box-shadow: 0 0 30px rgba(255, 68, 102, 0.4);
         }
         .gyro-toast.show { opacity: 1; }
+        .debug-panel {
+            position: fixed;
+            top: 110px;
+            right: 12px;
+            background: rgba(0,10,8,0.95);
+            border: 1px solid #00ffc8;
+            padding: 10px 14px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: #00ffc8;
+            z-index: 40;
+            min-width: 140px;
+            box-shadow: 0 0 15px rgba(0,255,200,0.2);
+        }
+        .debug-panel .label { color: #336633; font-size: 9px; }
+        .debug-panel .value { color: #00ffc8; }
+        .debug-panel .null { color: #ff4466; }
+        .debug-panel .ok { color: #00ff66; }
     </style>
 </head>
 <body>
 
 <div id="gyro-toast" class="gyro-toast">Activa sensores:<br>Ajustes → Privacidad → Control de sensores</div>
+
+<div class="debug-panel" id="debug-panel">
+    <div class="label">GYRO DEBUG</div>
+    <div>α: <span id="gyro-a" class="null">NULL</span></div>
+    <div>β: <span id="gyro-b" class="null">NULL</span></div>
+    <div>γ: <span id="gyro-g" class="null">NULL</span></div>
+    <div class="label" style="margin-top:6px;">EVENT</div>
+    <div id="gyro-event" class="null">NO EVENT</div>
+</div>
 
 <video id="camera-feed" autoplay playsinline muted></video>
 <canvas id="renderCanvas"></canvas>
@@ -451,16 +478,56 @@
     let lastTapTime = 0;
     let gyroWorking = false;
     let gyroChecked = false;
+    let gyroEventCount = 0;
+    
+    // Debug panel update
+    function updateDebugPanel(e) {
+        const panel = document.getElementById('debug-panel');
+        const a = document.getElementById('gyro-a');
+        const b = document.getElementById('gyro-b');
+        const g = document.getElementById('gyro-g');
+        const ev = document.getElementById('gyro-event');
+        if (!panel || !a || !b || !g || !ev) return;
+        
+        gyroEventCount++;
+        ev.textContent = 'RECEIVED #' + gyroEventCount;
+        ev.className = 'ok';
+        
+        if (e.alpha === null) {
+            a.textContent = 'NULL';
+            a.className = 'null';
+        } else {
+            a.textContent = e.alpha.toFixed(1);
+            a.className = 'ok';
+        }
+        
+        if (e.beta === null) {
+            b.textContent = 'NULL';
+            b.className = 'null';
+        } else {
+            b.textContent = e.beta.toFixed(1);
+            b.className = 'ok';
+        }
+        
+        if (e.gamma === null) {
+            g.textContent = 'NULL';
+            g.className = 'null';
+        } else {
+            g.textContent = e.gamma.toFixed(1);
+            g.className = 'ok';
+        }
+    }
     
     // Deteccion temprana de giroscopio
     function checkGyroscope() {
         const toast = document.getElementById('gyro-toast');
         const handler = (e) => {
+            updateDebugPanel(e);
             if (e.alpha !== null || e.beta !== null || e.gamma !== null) {
                 gyroWorking = true;
             }
         };
-        window.addEventListener('deviceorientation', handler, { once: true });
+        window.addEventListener('deviceorientation', handler);
         setTimeout(() => {
             if (!gyroWorking && !gyroChecked) {
                 gyroChecked = true;
