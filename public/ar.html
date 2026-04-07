@@ -320,9 +320,31 @@
             cursor: pointer;
             font-family: monospace;
         }
+        .gyro-toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(180deg, #1a0505, #0a0202);
+            border: 2px solid #ff4466;
+            color: #ff8888;
+            padding: 16px 24px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            text-align: center;
+            z-index: 150;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            max-width: 280px;
+            box-shadow: 0 0 30px rgba(255, 68, 102, 0.4);
+        }
+        .gyro-toast.show { opacity: 1; }
     </style>
 </head>
 <body>
+
+<div id="gyro-toast" class="gyro-toast">Activa sensores:<br>Ajustes → Privacidad → Control de sensores</div>
 
 <video id="camera-feed" autoplay playsinline muted></video>
 <canvas id="renderCanvas"></canvas>
@@ -427,6 +449,28 @@
     let highscore = parseInt(localStorage.getItem('neoproxy_highscore') || '0');
     let useTouchFallback = false;
     let lastTapTime = 0;
+    let gyroWorking = false;
+    let gyroChecked = false;
+    
+    // Deteccion temprana de giroscopio
+    function checkGyroscope() {
+        const toast = document.getElementById('gyro-toast');
+        const handler = (e) => {
+            if (e.alpha !== null || e.beta !== null || e.gamma !== null) {
+                gyroWorking = true;
+            }
+        };
+        window.addEventListener('deviceorientation', handler, { once: true });
+        setTimeout(() => {
+            if (!gyroWorking && !gyroChecked) {
+                gyroChecked = true;
+                if (toast) toast.classList.add('show');
+                setTimeout(() => {
+                    if (toast) toast.classList.remove('show');
+                }, 5000);
+            }
+        }, 1500);
+    }
     
     let audioCtx = null;
     function initAudio() {
@@ -983,6 +1027,7 @@
     async function init() {
         startBtn.textContent = 'CONECTANDO...';
         startBtn.disabled = true;
+        checkGyroscope();
         initAudio();
         initAmmoBar();
         const timeout = setTimeout(()=> video.style.display = 'none', 4000);
