@@ -17,14 +17,17 @@ export default function GlobalNav() {
 
   const navItems = [
     { href: '/', label: 'HOME', icon: '⚡' },
+    { href: '/portal', label: 'PORTAL', icon: '🌀' },
+    { href: '/ar', label: 'AR_COMBAT', icon: '🔫' },
+    { href: '/espada', label: 'ESPADA', icon: '⚔️' },
     { href: '/shop', label: 'SHOP', icon: '🛒' },
-    { href: '/concept', label: 'CONCEPT', icon: '🧠' },
-    { href: '/manifesto', label: 'MANIFESTO', icon: '📜' },
     { href: '/npos', label: 'NPOS_OS', icon: '⚙️' },
-    { href: '/npos/lab', label: 'LAB', icon: '🔬' },
-    { href: '/npos/fabrication', label: 'FABRICATION', icon: '🎭' },
-    { href: '/night/assembly', label: 'NIGHT', icon: '🌙' },
+    { href: '/npos/memory', label: 'MEMORY', icon: '🧠' },
+    { href: '/artifacts', label: 'ARTIFACTS', icon: '🏺' },
     { href: '/kernel', label: 'KERNEL', icon: '🧊' },
+    { href: '/system', label: 'SYSTEM', icon: '🧬' },
+    { href: '/network', label: 'NETWORK', icon: '🌐' },
+    { href: '/manifesto', label: 'MANIFESTO', icon: '📜' },
   ]
 
   const isActive = (href: string) => {

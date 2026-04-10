@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import Link from 'next/link';
 
 /* ═══════════════════════════════════════════════════════
    TYPES
@@ -724,8 +725,14 @@ export default function NeoProxyHero() {
           NEO<span style={{ color: '#bb44ff' }}>PROXY</span>
         </span>
         <div style={{ display: 'flex', gap: '2rem' }}>
-          {['INDEX','PORTAL','SYSTEMS','ARTEFACTS','MEMORY'].map(n => (
-            <a key={n} href={`#${n.toLowerCase()}`} className="nav-link">{n}</a>
+          {[
+            { n: 'INDEX', h: '#index' },
+            { n: 'PORTAL', h: '/portal' },
+            { n: 'SYSTEMS', h: '/system' },
+            { n: 'ARTEFACTS', h: '/artifacts' },
+            { n: 'MEMORY', h: '/npos/memory' }
+          ].map(item => (
+            <Link key={item.n} href={item.h} className="nav-link">{item.n}</Link>
           ))}
         </div>
         <div style={{ fontSize: '0.62rem', letterSpacing: '0.2em', color: 'rgba(0,240,255,0.4)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -769,7 +776,9 @@ export default function NeoProxyHero() {
                 onClick={() => document.getElementById('portal')?.scrollIntoView({ behavior: 'smooth' })}>
                 Iniciar enlace neural
               </button>
-              <button className="cta-btn-2">Ver artefactos</button>
+              <Link href="/artifacts">
+                <button className="cta-btn-2">Ver artefactos</button>
+              </Link>
             </div>
           </div>
 
@@ -889,6 +898,308 @@ export default function NeoProxyHero() {
           </div>
         </div>
       </section>
+
+      {/* ══ ARTEFACTOS — GALERÍA 3D ══ */}
+      <section id="artefacts" style={{
+        position: 'relative',
+        width: '100%',
+        minHeight: '100vh',
+        background: 'linear-gradient(180deg, #000308 0%, #0a0a1a 50%, #000308 100%)',
+        borderTop: '1px solid rgba(0,240,255,0.15)',
+        borderBottom: '1px solid rgba(170,0,255,0.15)',
+        padding: '4rem 2.5rem',
+        overflow: 'hidden',
+      }}>
+        {/* Background grid */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: `
+            linear-gradient(90deg, rgba(0,240,255,0.03) 1px, transparent 1px),
+            linear-gradient(rgba(0,240,255,0.03) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px',
+          pointerEvents: 'none',
+        }} />
+
+        <div style={{ position: 'relative', zIndex: 10, maxWidth: 1400, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+            <p className="section-tag">// sector 03 — archivo de manifestaciones</p>
+            <h2 style={{
+              fontFamily: "'Orbitron', monospace",
+              fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+              fontWeight: 900,
+              letterSpacing: '0.1em',
+              color: '#fff',
+              textShadow: '0 0 40px rgba(0,240,255,0.6), 0 0 80px rgba(170,0,255,0.3)',
+              margin: '1rem 0',
+            }}>
+              ARTEFACTOS<span style={{ color: '#00f0ff' }}>.GLB</span>
+            </h2>
+            <p style={{
+              fontSize: '0.9rem',
+              letterSpacing: '0.15em',
+              color: 'rgba(180,220,255,0.5)',
+              maxWidth: 600,
+              margin: '0 auto',
+              lineHeight: 1.8,
+            }}>
+              Entidades biomecánicas materializadas a través de la impresión 3D.<br />
+              Manifestaciones del espacio latente hacia la realidad física.
+            </p>
+          </div>
+
+          {/* Grid de artefactos */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '2rem',
+            marginTop: '3rem',
+          }}>
+            {[
+              {
+                id: 'cyborgling',
+                name: 'CYBORGLING',
+                file: 'cyborgling.png',
+                type: 'PNG',
+                desc: 'Entidad híbrida orgánico-mecánica',
+                tags: ['BIOMECÁNICO', 'RESINA'],
+                color: '#00f0ff',
+              },
+              {
+                id: 'fragmentado',
+                name: 'FRAGMENTADO',
+                file: 'fragmentado.glb',
+                type: 'GLB',
+                desc: 'Geometría fractura dimensional',
+                tags: ['FRACTAL', 'MESH'],
+                color: '#bb44ff',
+                isGLB: true,
+              },
+              {
+                id: 'neoproxygr',
+                name: 'NEOPROXY GR',
+                file: 'neoproxygr.png',
+                type: 'PNG',
+                desc: 'Guardián serpentino de la red',
+                tags: ['SERPENTE', 'PROTECTOR'],
+                color: '#ff9500',
+              },
+              {
+                id: 'neoproxyzila',
+                name: 'NEOPROXYZILA',
+                file: 'neoproxyzila.png',
+                type: 'PNG',
+                desc: 'Titan biomecánico de guerra',
+                tags: ['TITÁN', 'GUERRA'],
+                color: '#ff0040',
+              },
+            ].map((model) => (
+              <div
+                key={model.id}
+                className="artefact-card"
+                style={{
+                  position: 'relative',
+                  background: 'rgba(0,10,20,0.6)',
+                  border: `1px solid ${model.color}30`,
+                  padding: '1.5rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.4s ease',
+                  overflow: 'hidden',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = model.color;
+                  e.currentTarget.style.boxShadow = `0 0 30px ${model.color}40, inset 0 0 30px ${model.color}10`;
+                  e.currentTarget.style.transform = 'translateY(-5px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = `${model.color}30`;
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                {/* Corner accents */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: 20,
+                  height: 20,
+                  borderTop: `2px solid ${model.color}`,
+                  borderLeft: `2px solid ${model.color}`,
+                }} />
+                <div style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  width: 20,
+                  height: 20,
+                  borderBottom: `2px solid ${model.color}`,
+                  borderRight: `2px solid ${model.color}`,
+                }} />
+
+                {/* Type badge */}
+                <div style={{
+                  position: 'absolute',
+                  top: '1rem',
+                  right: '1rem',
+                  fontSize: '0.6rem',
+                  letterSpacing: '0.2em',
+                  color: model.color,
+                  border: `1px solid ${model.color}50`,
+                  padding: '0.2rem 0.5rem',
+                  background: `${model.color}15`,
+                }}>
+                  {model.type}
+                </div>
+
+                {/* Image container with scanline effect */}
+                <div style={{
+                  position: 'relative',
+                  width: '100%',
+                  aspectRatio: '1',
+                  background: 'rgba(0,0,0,0.5)',
+                  marginBottom: '1rem',
+                  overflow: 'hidden',
+                }}>
+                  <img
+                    src={`/models/${model.file.replace('.glb', '.png')}`}
+                    alt={model.name}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      filter: `saturate(1.2) contrast(1.1) drop-shadow(0 0 20px ${model.color}30)`,
+                    }}
+                    onError={(e) => {
+                      // Fallback para GLB sin preview
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                  {/* Scanline overlay */}
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)',
+                    pointerEvents: 'none',
+                  }} />
+                  {/* GLB indicator */}
+                  {model.isGLB && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '0.5rem',
+                      left: '0.5rem',
+                      fontSize: '0.55rem',
+                      letterSpacing: '0.15em',
+                      color: '#fff',
+                      background: 'rgba(187,68,255,0.8)',
+                      padding: '0.2rem 0.4rem',
+                    }}>
+                      ◉ INTERACTIVO
+                    </div>
+                  )}
+                </div>
+
+                {/* Content */}
+                <h3 style={{
+                  fontFamily: "'Orbitron', monospace",
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.1em',
+                  color: model.color,
+                  marginBottom: '0.5rem',
+                }}>
+                  {model.name}
+                </h3>
+                <p style={{
+                  fontSize: '0.75rem',
+                  letterSpacing: '0.05em',
+                  color: 'rgba(180,220,255,0.6)',
+                  marginBottom: '1rem',
+                  lineHeight: 1.5,
+                }}>
+                  {model.desc}
+                </p>
+
+                {/* Tags */}
+                <div style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                  flexWrap: 'wrap',
+                }}>
+                  {model.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      style={{
+                        fontSize: '0.55rem',
+                        letterSpacing: '0.15em',
+                        color: `${model.color}99`,
+                        border: `1px solid ${model.color}40`,
+                        padding: '0.2rem 0.4rem',
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Hover glow effect */}
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: `radial-gradient(circle at center, ${model.color}10, transparent 70%)`,
+                  opacity: 0,
+                  transition: 'opacity 0.4s ease',
+                  pointerEvents: 'none',
+                }} className="artefact-glow" />
+              </div>
+            ))}
+          </div>
+
+          {/* Stats bar */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '3rem',
+            marginTop: '4rem',
+            padding: '1.5rem',
+            borderTop: '1px solid rgba(0,240,255,0.1)',
+            borderBottom: '1px solid rgba(0,240,255,0.1)',
+          }}>
+            {[
+              { label: 'MANIFESTACIONES', val: '04', color: '#00f0ff' },
+              { label: 'FORMATOS', val: 'GLB · PNG', color: '#bb44ff' },
+              { label: 'CAPA REALIDAD', val: 'MATERIAL', color: '#ff9500' },
+            ].map((stat) => (
+              <div key={stat.label} style={{ textAlign: 'center' }}>
+                <div style={{
+                  fontFamily: "'Orbitron', monospace",
+                  fontSize: '1.8rem',
+                  fontWeight: 900,
+                  color: stat.color,
+                  textShadow: `0 0 20px ${stat.color}50`,
+                }}>
+                  {stat.val}
+                </div>
+                <div style={{
+                  fontSize: '0.6rem',
+                  letterSpacing: '0.25em',
+                  color: 'rgba(180,220,255,0.4)',
+                  marginTop: '0.3rem',
+                }}>
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <style>{`
+        .artefact-card:hover .artefact-glow {
+          opacity: 1 !important;
+        }
+      `}</style>
 
       {/* ══ FOOTER ══ */}
       <footer style={{
