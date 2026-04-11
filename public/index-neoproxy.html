@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEO·PROXY — SISTEMA DE ARTEFACTOS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --red: #cc0000;
+            --red-glow: #ff0000;
+            --bg: #000000;
+            --text: #c8c8c8;
+            --text-dim: #666666;
+            --card-bg: #0a0a0a;
+        }
+
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Scanline effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(204, 0, 0, 0.03) 2px,
+                rgba(204, 0, 0, 0.03) 4px
+            );
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* Header */
+        header {
+            border-bottom: 1px solid var(--red);
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            background: linear-gradient(180deg, rgba(204,0,0,0.1) 0%, transparent 100%);
+        }
+
+        .logo {
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(2rem, 6vw, 4rem);
+            font-weight: 900;
+            letter-spacing: 0.2em;
+            color: var(--red);
+            text-shadow: 0 0 20px var(--red-glow), 0 0 40px rgba(255,0,0,0.5);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 0.7rem;
+            letter-spacing: 0.4em;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+
+        .divider {
+            width: 200px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--red), transparent);
+            margin: 1rem auto;
+        }
+
+        /* 3D Viewer Section */
+        .viewer-section {
+            border-bottom: 1px solid rgba(204, 0, 0, 0.3);
+        }
+
+        .section-label {
+            font-size: 0.6rem;
+            letter-spacing: 0.3em;
+            color: var(--red);
+            padding: 1rem 2rem;
+            background: rgba(204, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(204, 0, 0, 0.2);
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 400px;
+            background: var(--bg);
+            position: relative;
+        }
+
+        #model-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .viewer-info {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            background: rgba(0,0,0,0.8);
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(204,0,0,0.3);
+        }
+
+        /* AR Button */
+        .ar-section {
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(204, 0, 0, 0.3);
+            background: linear-gradient(180deg, transparent 0%, rgba(204,0,0,0.05) 50%, transparent 100%);
+        }
+
+        .ar-button {
+            display: inline-block;
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            color: var(--red);
+            text-decoration: none;
+            padding: 1.5rem 3rem;
+            border: 2px solid var(--red);
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ar-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(204,0,0,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .ar-button:hover::before {
+            left: 100%;
+        }
+
+        .ar-button:hover {
+            background: rgba(204, 0, 0, 0.1);
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.4);
+            text-shadow: 0 0 10px var(--red-glow);
+        }
+
+        .ar-button::after {
+            content: '◉';
+            margin-left: 1rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Artifacts Grid */
+        .artifacts-section {
+            padding: 3rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            color: var(--red);
+            letter-spacing: 0.15em;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .artifacts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .artifact-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(204, 0, 0, 0.2);
+            padding: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .artifact-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--red);
+            transition: width 0.3s ease;
+        }
+
+        .artifact-card:hover {
+            border-color: var(--red);
+            box-shadow: 0 0 20px rgba(204, 0, 0, 0.2), inset 0 0 20px rgba(204, 0, 0, 0.05);
+            transform: translateY(-3px);
+        }
+
+        .artifact-card:hover::before {
+            width: 100%;
+        }
+
+        .artifact-image {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            background: #111;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(204, 0, 0, 0.1);
+        }
+
+        .artifact-id {
+            font-size: 0.6rem;
+            letter-spacing: 0.2em;
+            color: var(--red);
+            margin-bottom: 0.3rem;
+        }
+
+        .artifact-name {
+            font-family: 'Orbitron', monospace;
+            font-size: 1rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .artifact-price {
+            font-size: 0.9rem;
+            color: var(--red);
+            letter-spacing: 0.1em;
+        }
+
+        .artifact-price::before {
+            content: '$';
+            margin-right: 0.3rem;
+        }
+
+        /* Placeholder */
+        .placeholder {
+            width: 100%;
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #111 0%, #1a1a1a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(204, 0, 0, 0.1);
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid rgba(204, 0, 0, 0.2);
+            padding: 2rem;
+            text-align: center;
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            letter-spacing: 0.2em;
+        }
+
+        /* Loading */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8rem;
+            color: var(--red);
+            letter-spacing: 0.2em;
+        }
+
+        .loading::after {
+            content: '';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">NEO·PROXY</div>
+        <div class="divider"></div>
+        <div class="subtitle">SISTEMA DE ARTEFACTOS</div>
+    </header>
+
+    <section class="viewer-section">
+        <div class="section-label">◉ VISUALIZACIÓN 3D // FRAGMENTADO.GLB</div>
+        <div id="canvas-container">
+            <canvas id="model-canvas"></canvas>
+            <div class="viewer-info">
+                MODEL: FRAGMENTADO.GLB | STATUS: ACTIVE | ROTATION: AUTO
+            </div>
+        </div>
+    </section>
+
+    <section class="ar-section">
+        <a href="/ar.html" class="ar-button">ACCEDER AL SISTEMA AR</a>
+    </section>
+
+    <section class="artifacts-section">
+        <h2 class="section-title">◉ CATÁLOGO DE ARTEFACTOS</h2>
+        <div class="artifacts-grid" id="artifacts-grid">
+            <!-- Cards will be generated by JavaScript -->
+        </div>
+    </section>
+
+    <footer>
+        NEO·PROXY SYSTEMS © 2026 // DESIGNED FOR THE CONSCIOUSNESS
+    </footer>
+
+    <!-- Three.js from CDN -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        // 3D Viewer Setup
+        const canvas = document.getElementById('model-canvas');
+        const container = document.getElementById('canvas-container');
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+        camera.position.set(0, 0, 5);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Red lighting
+        const ambientLight = new THREE.AmbientLight(0x330000, 0.5);
+        scene.add(ambientLight);
+
+        const redLight = new THREE.PointLight(0xff0000, 2, 50);
+        redLight.position.set(2, 2, 5);
+        scene.add(redLight);
+
+        const redLight2 = new THREE.PointLight(0xcc0000, 1.5, 50);
+        redLight2.position.set(-3, -2, 3);
+        scene.add(redLight2);
+
+        const redLight3 = new THREE.DirectionalLight(0xff0000, 0.8);
+        redLight3.position.set(0, 5, 0);
+        scene.add(redLight3);
+
+        // Grid helper (subtle)
+        const grid = new THREE.GridHelper(10, 20, 0x330000, 0x111111);
+        grid.position.y = -1;
+        scene.add(grid);
+
+        // Load GLB
+        const loader = new GLTFLoader();
+        let model;
+
+        loader.load('/models/fragmentado.glb', 
+            (gltf) => {
+                model = gltf.scene;
+                
+                // Center model
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                model.position.sub(center);
+                
+                // Scale to fit
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 2 / maxDim;
+                model.scale.multiplyScalar(scale);
+
+                // Apply emissive material to all meshes
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.emissive = new THREE.Color(0x330000);
+                        child.material.emissiveIntensity = 0.3;
+                    }
+                });
+
+                scene.add(model);
+            },
+            (xhr) => {
+                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            (error) => {
+                console.error('Error loading GLB:', error);
+                // Add fallback cube
+                const geometry = new THREE.BoxGeometry(1, 1, 1);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0xcc0000,
+                    emissive: 0x330000,
+                    emissiveIntensity: 0.5,
+                    wireframe: true
+                });
+                const cube = new THREE.Mesh(geometry, material);
+                scene.add(cube);
+                model = cube;
+            }
+        );
+
+        // Animation loop
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.01;
+
+            if (model) {
+                model.rotation.y += 0.005;
+                model.position.y = Math.sin(time) * 0.1;
+            }
+
+            // Rotate lights
+            redLight.position.x = Math.sin(time * 0.5) * 4;
+            redLight.position.z = Math.cos(time * 0.5) * 4;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // Artifacts Data
+        const artifacts = [
+            {
+                id: 'NP-CYB-001',
+                name: 'CYBORGLING',
+                price: '149.000',
+                image: '/models/cyborgring.png',
+                desc: 'Entidad híbrida'
+            },
+            {
+                id: 'NP-GRD-002', 
+                name: 'NEOPROXY GR',
+                price: '189.000',
+                image: '/models/neoproxygr.png',
+                desc: 'Guardián serpentino'
+            },
+            {
+                id: 'NP-ZLA-003',
+                name: 'NEOPROXYZILA',
+                price: '229.000',
+                image: '/models/neoproxzylla.png',
+                desc: 'Titán de guerra'
+            },
+            {
+                id: 'NP-FRG-000',
+                name: 'FRAGMENTADO',
+                price: '179.000',
+                image: '',
+                desc: 'Geometría fractal',
+                glb: true
+            },
+            {
+                id: 'NP-ONI-004',
+                name: 'CYBER ONI',
+                price: '199.000',
+                image: '/models/cyber_oni_test.jpg',
+                desc: 'Demonio digital'
+            },
+            {
+                id: 'NP-XXX-005',
+                name: 'ARTEFACTO X',
+                price: '???',
+                image: '',
+                desc: 'Clasificado'
+            }
+        ];
+
+        // Generate Artifact Cards
+        const grid = document.getElementById('artifacts-grid');
+        
+        artifacts.forEach(art => {
+            const card = document.createElement('div');
+            card.className = 'artifact-card';
+            
+            const hasImage = art.image && art.image.trim() !== '';
+            const imageHtml = hasImage 
+                ? `<img src="${art.image}" alt="${art.name}" class="artifact-image" onerror="this.parentElement.innerHTML='<div class=\\'placeholder\\'>[ SIN IMAGEN ]</div>'">`
+                : `<div class="placeholder">${art.glb ? '[ INTERACTIVO ]' : '[ SIN IMAGEN ]'}</div>`;
+            
+            card.innerHTML = `
+                ${imageHtml}
+                <div class="artifact-id">${art.id}</div>
+                <div class="artifact-name">${art.name}</div>
+                <div class="artifact-price">${art.price} CLP</div>
+            `;
+            
+            grid.appendChild(card);
+        });
+    </script>
+</body>
+</html>

@@ -4,12 +4,12 @@
 
 .globalNav {
   --nav-bg: rgba(0, 0, 0, 0.95);
-  --nav-border: #1a1a1a;
-  --nav-accent: #00ff9d;
-  --nav-secondary: #00d4ff;
+  --nav-border: #1a0000;
+  --nav-accent: #cc0000;
+  --nav-secondary: #ff3333;
   --nav-text: #ffffff;
   --nav-muted: #888888;
-  --nav-active: rgba(0, 255, 157, 0.15);
+  --nav-active: rgba(204, 0, 0, 0.15);
 }
 
 /* ===================================
@@ -116,7 +116,7 @@
   height: 100%;
   background: linear-gradient(90deg, 
     transparent, 
-    rgba(0, 255, 157, 0.2), 
+    rgba(204, 0, 0, 0.2), 
     transparent
   );
   transition: left 0.5s ease;
@@ -129,7 +129,7 @@
 .navItem:hover {
   color: var(--nav-accent);
   border-color: var(--nav-accent);
-  background: rgba(0, 255, 157, 0.05);
+  background: rgba(204, 0, 0, 0.05);
   transform: translateY(-2px);
 }
 
@@ -337,24 +337,24 @@
 .navItem[href="/concept"]:hover {
   color: var(--nav-secondary);
   border-color: var(--nav-secondary);
-  background: rgba(0, 212, 255, 0.05);
+  background: rgba(255, 51, 51, 0.05);
 }
 
 .navItem[href="/manifesto"]:hover {
-  color: #7b2fff;
-  border-color: #7b2fff;
-  background: rgba(123, 47, 255, 0.05);
+  color: #8b0000;
+  border-color: #8b0000;
+  background: rgba(139, 0, 0, 0.05);
 }
 
 .navItem[href="/npos"]:hover,
 .navItem[href="/npos/lab"]:hover {
   color: var(--nav-secondary);
   border-color: var(--nav-secondary);
-  background: rgba(0, 212, 255, 0.05);
+  background: rgba(255, 51, 51, 0.05);
 }
 
 .navItem[href="/fabrication"]:hover {
-  color: #ff3cac;
-  border-color: #ff3cac;
-  background: rgba(255, 60, 172, 0.05);
+  color: #cc0000;
+  border-color: #cc0000;
+  background: rgba(204, 0, 0, 0.05);
 }
